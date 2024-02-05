@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Neural Network Visualization</title>
+    <style>
+        #networkCanvas {
+            border: 1px solid black;
+        }
+        .input-container {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="networkCanvas" width="800" height="600"></canvas>
+    <div class="input-container">
+        <!-- Placeholder for input elements -->
+    </div>
+    <div class="input-container">
+        <!-- Existing elements -->
+        <button id="toggleButton">Stop</button>
+    
+        <button onclick="applyFeedback(true)">Reward</button>
+        <button onclick="applyFeedback(false)">Punish</button>
+       
+
+    </div>
+
+</body>
+<script>
+    const canvas = document.getElementById('networkCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let clockCycle = 0;
+    const TOTAL_CYCLES = 2;
+    const neurons = [];
+    const someThreshold = 3; // Example threshold value, adjust as needed
+    let integrity = 100;
+    let lastFourOutputs = []; // To store the last four outputs
+
+
+    // ... [Previous Code] ...
+
+
+
+    // Define a basic neuron object
+
+    function Neuron(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type; // 'excitatory', 'inhibitory', or 'pacemaker'
+        this.isActive = type === 'pacemaker'; // Pacemaker starts active
+        this.preOutputSum = 0; // To store pre-output summation
+        // ... any other properties ...
+    }
+
+    Neuron.prototype.draw = function (index) {
+        let color;
+        switch (this.type) {
+            case 'excitatory': color = 'green'; break;
+            case 'inhibitory': color = 'red'; break;
+            case 'pacemaker': color = 'purple'; break;
+        }
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 20, 0, 2 * Math.PI);
+        ctx.strokeStyle = color;
+        ctx.fillStyle = this.isActive ? color : 'white';
+        ctx.fill();
+        ctx.stroke();
+
+        // If the neuron is an output neuron, draw an additional circle around it
+        if (outputNeurons.includes(this)) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 25, 0, 2 * Math.PI); // Slightly larger circle
+            ctx.strokeStyle = 'blue'; // Different color to indicate output
+            ctx.stroke();
+        }
+
+        // Draw the neuron number
+        ctx.fillStyle = 'black';
+        ctx.font = '12px Arial';
+        ctx.fillText(index, this.x - 5, this.y + 5); // Adjust text position as needed
+    };
+
+
+    // Define grid dimensions
+    const GRID_ROWS = 6; // Six rows
+    const GRID_COLS = 6; // Six columns
+
+    // Calculate grid spacing
+    const GRID_SPACING_X = canvas.width / (GRID_COLS + 1);
+    const GRID_SPACING_Y = canvas.height / (GRID_ROWS + 1);
+
+// ... rest of your initialization code for neurons and connections ...
+
+    let pacemakerCount = 0; // Track the number of pacemaker neurons
+
+    // Determine the neuron type based on your criteria
+    function determineNeuronType(row, col) {
+        if (pacemakerCount < 2) {
+            pacemakerCount++;
+            return 'pacemaker';
+        } else {
+            // Alternate between excitatory and inhibitory, or use your own logic
+            return (row + col) % 2 === 0 ? 'excitatory' : 'inhibitory';
+        }
+    }
+
+    // Initialize neurons
+    for (let i = 0; i < GRID_ROWS; i++) {
+        for (let j = 0; j < GRID_COLS; j++) {
+            let type = determineNeuronType(i, j);
+            let x = GRID_SPACING_X * (j + 1);
+            let y = GRID_SPACING_Y * (i + 1);
+            neurons.push(new Neuron(x, y, type));
+        }
+    }
+
+    // Define a connection object
+    function Connection(fromNeuron, toNeuron, weight) {
+        this.fromNeuron = fromNeuron;
+        this.toNeuron = toNeuron;
+        this.weight = weight; // Weight can be between 0 and 3
+    }
+
+    // ... [Neuron Initialization Code] ...
+
+    // Initialize connections
+    const connections = [];
+
+    neurons.forEach(neuron => {
+        let connectionsCreated = 0;
+        while (connectionsCreated < 10) {
+            let targetNeuron = getRandomNeuron(neurons, neuron);
+            let weight = Math.floor(Math.random() * 4); // Random weight between 0 and 3
+            connections.push(new Connection(neuron, targetNeuron, weight));
+            connectionsCreated++;
+        }
+    });
+
+    function getRandomNeuron(neuronList, excludeNeuron) {
+        let filteredList = neuronList.filter(n => n !== excludeNeuron);
+        return filteredList[Math.floor(Math.random() * filteredList.length)];
+    }
+
+
+// Randomly pick two output neurons
+const outputNeurons = [];
+while (outputNeurons.length < 2) {
+    let candidateNeuron = neurons[Math.floor(Math.random() * neurons.length)];
+    if (!outputNeurons.includes(candidateNeuron) && candidateNeuron.type !== 'pacemaker') {
+        outputNeurons.push(candidateNeuron);
+    }
+}
+
+    function updateNeurons() {
+        neurons.forEach(neuron => {
+            if (neuron.type === 'pacemaker') {
+                neuron.isActive = !neuron.isActive;
+            } else {
+                // Calculate pre-output summation
+                let inputSum = connections.filter(conn => conn.toNeuron === neuron)
+                    .reduce((sum, conn) => sum + (conn.fromNeuron.isActive ? conn.weight : 0), 0);
+                // Store the sum before applying the threshold
+                neuron.preOutputSum = inputSum;
+                // Determine if the neuron should be active based on the threshold
+                neuron.isActive = inputSum > someThreshold;
+            }
+        });
+        // Get current output pair
+        let currentOutputPair = outputNeurons.map(neuron => neuron.isActive ? 1 : 0);
+
+        // Update lastFourOutputs
+        lastFourOutputs.push(currentOutputPair);
+        if (lastFourOutputs.length > 2) {
+            lastFourOutputs.shift(); // Keep only the last two pairs (four outputs)
+        }
+    }
+
+
+
+
+
+
+    function applyFeedback(isReward) {
+        // Positive reinforcement if one of the output neurons is active
+        if (outputNeurons.some(neuron => neuron.isActive)) {
+            integrity = Math.min(integrity + 5, 100); // Increase integrity, cap at 100
+        } else if (Math.random() < 0.05) { // 5% chance of negative reinforcement
+            integrity = Math.max(integrity - 1, 1); // Decrease integrity, floor at 95
+        }
+    
+    
+        connections.forEach(connection => {
+            // Check if both neurons in the connection are active
+            if (connection.fromNeuron.isActive && connection.toNeuron.isActive) {
+                // Positive reinforcement for active connections
+                connection.weight = Math.min(connection.weight + 1, 3); // Increase weight, cap at 3
+            } else {
+                // Negative reinforcement: Decrease weight if not both active, but only 5% of the time
+                if (Math.random() < 0.3) {
+                    connection.weight = Math.max(connection.weight - 1, 1); // Decrease weight, floor at 0
+                }
+            }
+        });
+
+
+  
+    }
+
+
+
+
+ //   functio/n updateConnectionsBasedOnIntegrity() {
+ //       const breakProbability = (100 - integrity) / 100;
+
+ //       connections.forEach(connection => {
+ //           if (Math.random() < breakProbability) {
+                // Break and reform the connection
+ //               let fromNeuron = connection.fromNeuron;
+//                let toNeuron = getRandomNeuron(neurons, fromNeuron);
+ //               connection.toNeuron = toNeuron;
+ //               connection.weight = Math.floor(Math.random() * 4); // Random weight between 0 and 3
+  //          }
+   //     });
+  //  }
+
+
+    function updateConnectionsBasedOnIntegrity() {
+        const breakProbability = (100 - integrity) / 100;
+
+        // Filter connections where at least one neuron (source or target) is active
+        let activeConnections = connections.filter(conn => conn.fromNeuron.isActive || conn.toNeuron.isActive);
+
+        if (activeConnections.length > 0 && Math.random() < breakProbability) {
+            // Select a random active connection to update
+            const randomIndex = Math.floor(Math.random() * activeConnections.length);
+            let connection = activeConnections[randomIndex];
+
+            // Break and reform the connection
+            let fromNeuron = connection.fromNeuron;
+            let toNeuron = getRandomNeuron(neurons, fromNeuron);
+            connection.toNeuron = toNeuron;
+            connection.weight = Math.floor(Math.random() * 4); // Random weight between 0 and 3
+        }
+    }
+
+
+
+
+    function drawConnections() {
+        const arrowSize = 5; // Size of the directional dot
+        const arrowOffset = 20; // How far the dot is from the center of the neuron
+
+        connections.forEach(connection => {
+            let from = connection.fromNeuron;
+            let to = connection.toNeuron;
+
+            // Draw the line for the connection
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = connection.weight; // Line thickness based on weight
+            ctx.stroke();
+
+            // Calculate the position of the dot near the target neuron
+            let angle = Math.atan2(to.y - from.y, to.x - from.x);
+            let dotX = to.x - arrowOffset * Math.cos(angle);
+            let dotY = to.y - arrowOffset * Math.sin(angle);
+
+            // Draw the directional dot
+            ctx.beginPath();
+            ctx.arc(dotX, dotY, arrowSize, 0, 2 * Math.PI);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+        });
+    }
+
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawConnections(); // Draw connections first
+
+        // Draw each neuron and label it with its index
+        neurons.forEach((neuron, index) => neuron.draw(index + 1)); // Adding 1 to start numbering from 1
+
+        // Display the pre-output summation and actual neuron number for the output neurons
+        outputNeurons.forEach((outputNeuron, index) => {
+            let neuronIndex = neurons.indexOf(outputNeuron) + 1; // Find the neuron index in the array
+            let outputValue = outputNeuron.isActive ? 1 : 0;
+
+            ctx.fillStyle = 'black';
+            ctx.font = '16px Arial';
+            ctx.fillText('Output Neuron ' + neuronIndex + ': Sum = ' + outputNeuron.preOutputSum.toFixed(2) + ', Output = ' + outputValue, 10, canvas.height - 30 * (index + 1));
+        });
+
+        // Display the current integrity score
+        ctx.fillStyle = 'black';
+        ctx.font = '16px Arial';
+        ctx.fillText('Integrity: ' + integrity, canvas.width - 120, 20);
+    }
+
+
+
+
+    let isAnimating = true;
+
+    document.getElementById('toggleButton').addEventListener('click', function () {
+        isAnimating = !isAnimating;
+        this.textContent = isAnimating ? 'Stop' : 'Start';
+        if (isAnimating) {
+            animate();
+        }
+    });
+
+    function checkLearning() {
+        applyFeedback(); // Apply feedback based on the current state
+    }
+
+
+    function animate() {
+        if (!isAnimating) return;
+
+        if (clockCycle === 0) {
+            updateConnectionsBasedOnIntegrity();
+            checkLearning(); // Apply feedback every cycle
+        }
+
+        updateNeurons(); // Update neurons every subcycle
+        draw();
+        if (clockCycle < TOTAL_CYCLES) {
+            clockCycle++;
+        } else {
+            clockCycle = 0;
+        }
+        requestAnimationFrame(animate);
+    }
+
+
+ 
+
+    animate();
+
+</script>
+</html>
