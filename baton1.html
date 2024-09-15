@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Network Visualization</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            position: relative;
+        }
+
+        #controls {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        canvas {
+            border: 1px solid black;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .floating-window {
+            position: absolute;
+            background-color: white;
+            border: 1px solid black;
+            padding: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <label for="numReservoirs">Number of reservoirs:</label>
+        <input type="number" id="numReservoirs" value="20">
+        <label for="numBatons">Number of batons:</label>
+        <input type="number" id="numBatons" value="6">
+        <label for="numPosBatons">Number of positive batons:</label>
+        <input type="number" id="numPosBatons" value="2">
+        <label for="numNegBatons">Number of negative batons:</label>
+        <input type="number" id="numNegBatons" value="2">
+        <label for="numPacemakerBatons">Number of pacemaker batons:</label>
+        <input type="number" id="numPacemakerBatons" value="2">
+        <label for="reservoirMaxValue">Reservoir max value:</label>
+        <input type="number" id="reservoirMaxValue" value="4">
+        <label for="posBatonThreshold">Positive baton threshold:</label>
+        <input type="number" id="posBatonThreshold" value="2">
+        <label for="negBatonThreshold">Negative baton threshold:</label>
+        <input type="number" id="negBatonThreshold" value="2">
+        
+        <label for="tropism">Choose Tropism:</label>
+        <select id="tropism">
+            <option value="N">North</option>
+            <option value="S">South</option>
+            <option value="E">East</option>
+            <option value="W">West</option>
+        </select>
+        
+        <button onclick="startSimulation()">Start Simulation</button>
+    </div>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <div id="batonInfo" class="floating-window"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const batonInfo = document.getElementById('batonInfo');
+
+        const WHITE = '#FFFFFF';
+        const BLACK = '#000000';
+        const GRAY = '#C8C8C8';
+        const RED = '#FF0000';
+        const GREEN = '#00FF00';
+        const BLUE = '#0000FF';
+        const YELLOW = '#FFFF00';
+
+        let reservoirs = [];
+        let batons = [];
+        let selectedBaton = null;
+        let reservoirMaxValue;
+        let square = { x: 400, y: 300, size: 20 }; // Initial position and size of the square
+        let directionReservoirs = {}; // To store reservoirs controlling each direction
+        let sensoryReservoirs = {}; // To store the sensory reservoirs
+        let tropism = 'N'; // Default tropism direction
+        let lastTwoMovements = [{ x: square.x, y: square.y }, { x: square.x, y: square.y }]; // Track the last two movements
+
+        class Reservoir {
+            constructor(name, pos) {
+                this.name = name;
+                this.pos = pos;
+                this.value = 6;
+                this.inputs = [];
+                this.outputs = [];
+            }
+
+            addInput(baton) {
+                if (this.inputs.length < 4) {
+                    this.inputs.push(baton);
+                }
+            }
+
+            addOutput(baton) {
+                if (this.outputs.length < 4) {
+                    this.outputs.push(baton);
+                }
+            }
+
+            updateValue(signal) {
+                this.value += signal;
+                this.value = Math.max(0, Math.min(this.value, reservoirMaxValue));
+            }
+
+            fade() {
+                this.value -= 1;
+                this.value = Math.max(0, this.value);
+            }
+
+            draw(label, color = BLACK) {
+                let fillColor;
+                switch (this.value) {
+                    case 0: fillColor = GRAY; break;
+                    case 1: fillColor = YELLOW; break;
+                    case 2: fillColor = GREEN; break;
+                    case 3: fillColor = BLUE; break;
+                    case 4:
+                    default: fillColor = RED; break;
+                }
+                ctx.beginPath();
+                ctx.arc(this.pos.x, this.pos.y, 40, 0, Math.PI * 2);
+                ctx.fillStyle = fillColor;
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = BLACK;
+                ctx.stroke();
+                ctx.closePath();
+
+                ctx.font = '24px Arial';
+                ctx.fillStyle = BLACK;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.value, this.pos.x, this.pos.y);
+
+                // Draw the label if provided
+                if (label) {
+                    ctx.font = '16px Arial';
+                    ctx.fillStyle = color;
+                    ctx.fillText(label, this.pos.x, this.pos.y + 50); // Adjust position as needed
+                }
+            }
+        }
+
+        class Baton {
+            constructor(threshold, batonType = 'positive', id) {
+                this.id = id;
+                this.threshold = threshold;
+                this.batonType = batonType;
+                this.hitPoints = 10;
+                this.stepsSinceLastSignal = 0;
+                this.startReservoir = null;
+                this.endReservoir = null;
+                this.active = false;
+                this.dotPos = { x: 0, y: 0 }; // Position for the info dot
+            }
+
+            connect(startReservoir, endReservoir) {
+                if (endReservoir === undefined || Object.values(sensoryReservoirs).includes(endReservoir)) {
+                    // Do not connect to undefined or sensory reservoirs as end points
+                    return;
+                }
+
+                this.startReservoir = startReservoir;
+                this.endReservoir = endReservoir;
+                startReservoir.addOutput(this);
+                endReservoir.addInput(this);
+
+                // Position the info dot near the start reservoir
+                this.dotPos = {
+                    x: startReservoir.pos.x + 10,
+                    y: startReservoir.pos.y + 10
+                };
+            }
+
+            transmitSignal() {
+                this.stepsSinceLastSignal++;
+                if (this.batonType === 'pacemaker' && this.stepsSinceLastSignal % 3 !== 0) {
+                    this.active = false;
+                    return 0;
+                }
+
+                console.log(`${this.batonType.charAt(0).toUpperCase() + this.batonType.slice(1)} Baton ID: ${this.id} checking transmission: Start Reservoir Value: ${this.startReservoir.value}, Threshold: ${this.threshold}`);
+
+                if (this.batonType === 'pacemaker' || this.startReservoir.value > this.threshold) {
+                    let signal = 1;
+                    if (this.batonType === 'negative') {
+                        signal = -1;
+                    } else if (this.batonType === 'pacemaker') {
+                        signal = 1;
+                    }
+
+                    if (this.hitPoints > 10) {
+                        signal *= 2;
+                    }
+
+                    console.log(`${this.batonType.charAt(0).toUpperCase() + this.batonType.slice(1)} Baton ID: ${this.id} transmitting signal: ${signal}`);
+                    this.endReservoir.updateValue(signal);
+                    this.active = true;
+                    return signal;
+                } else {
+                    console.log(`${this.batonType.charAt(0).toUpperCase() + this.batonType.slice(1)} Baton ID: ${this.id} not transmitting. Inactive.`);
+                    this.active = false;
+                    return 0;
+                }
+            }
+
+            reinforce() {
+                this.hitPoints = Math.min(this.hitPoints + 1, 100); // Cap hit points at 100
+            }
+
+            punish() {
+                this.hitPoints = Math.max(this.hitPoints - 0.5, 0); // Decrease hit points by 0.5, but ensure it doesn't go below 0
+                console.log(`${this.batonType.charAt(0).toUpperCase() + this.batonType.slice(1)} baton with ID: ${this.id} punished. New hit points: ${this.hitPoints}`);
+            }
+
+            relocate() {
+                const highReservoirs = reservoirs.filter(res => res.value > 2 && !Object.values(sensoryReservoirs).includes(res));
+                const lowReservoirs = reservoirs.filter(res => res.value < 2 && !Object.values(sensoryReservoirs).includes(res));
+
+                if (highReservoirs.length && lowReservoirs.length) {
+                    const newStart = highReservoirs[Math.floor(Math.random() * highReservoirs.length)];
+                    const newEnd = lowReservoirs[Math.floor(Math.random() * lowReservoirs.length)];
+                    this.connect(newStart, newEnd);
+                } else {
+                    const validReservoirs = reservoirs.filter(res => !Object.values(sensoryReservoirs).includes(res));
+                    const newStart = validReservoirs[Math.floor(Math.random() * validReservoirs.length)];
+                    const newEnd = validReservoirs.filter(r => r !== newStart)[Math.floor(Math.random() * (validReservoirs.length - 1))];
+                    this.connect(newStart, newEnd);
+                }
+
+                this.respawn();
+            }
+
+            respawn() {
+                this.hitPoints = 10;
+            }
+
+            draw() {
+                const color = this.batonType === 'positive' ? GREEN : this.batonType === 'negative' ? RED : BLUE;
+                const thickness = this.active ? 6 : this.hitPoints <= 10 ? 2 : 4;
+
+                ctx.beginPath();
+                ctx.moveTo(this.startReservoir.pos.x, this.startReservoir.pos.y);
+                ctx.lineTo(this.endReservoir.pos.x, this.endReservoir.pos.y);
+                ctx.lineWidth = thickness;
+                ctx.strokeStyle = color;
+                ctx.stroke();
+                ctx.closePath();
+
+                // Draw arrowheads
+                const angle = Math.atan2(this.endReservoir.pos.y - this.startReservoir.pos.y, this.endReservoir.pos.x - this.startReservoir.pos.x);
+                const endX = this.endReservoir.pos.x - 40 * Math.cos(angle);
+                const endY = this.endReservoir.pos.y - 40 * Math.sin(angle);
+                ctx.beginPath();
+                ctx.moveTo(endX, endY);
+                ctx.lineTo(endX - 10 * Math.cos(angle - Math.PI / 6), endY - 10 * Math.sin(angle - Math.PI / 6));
+                ctx.lineTo(endX - 10 * Math.cos(angle + Math.PI / 6), endY - 10 * Math.sin(angle + Math.PI / 6));
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                // Draw info dot
+                ctx.beginPath();
+                ctx.arc(this.dotPos.x, this.dotPos.y, 5, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+
+        // Function to arrange the positions of the reservoirs on the canvas
+        function arrangePositions(numReservoirs, width, height) {
+            const positions = {};
+            const rows = Math.floor(Math.sqrt(numReservoirs));
+            const cols = Math.ceil(numReservoirs / rows);
+            const margin = 50;
+            const rowHeight = (height - 2 * margin) / rows;
+            const colWidth = (width - 2 * margin) / cols;
+
+            for (let i = 0; i < numReservoirs; i++) {
+                const row = Math.floor(i / cols);
+                const col = i % cols;
+                const x = margin + col * colWidth + colWidth / 2;
+                const y = margin + row * rowHeight + rowHeight / 2;
+                positions[`reservoir${i + 1}`] = { x, y };
+            }
+            return positions;
+        }
+
+        function assignDirectionAndSensoryReservoirs() {
+            const directions = ['N', 'S', 'E', 'W'];
+            const shuffledReservoirs = [...reservoirs].sort(() => Math.random() - 0.5);
+
+            // Select movement reservoirs
+            directionReservoirs = directions.reduce((acc, direction, index) => {
+                acc[direction] = shuffledReservoirs[index];
+                return acc;
+            }, {});
+
+            // Filter out movement reservoirs and select sensory reservoirs
+            const remainingReservoirs = shuffledReservoirs.slice(directions.length);
+            const sensoryReservoirSelection = remainingReservoirs.sort(() => Math.random() - 0.5).slice(0, directions.length);
+
+            sensoryReservoirs = directions.reduce((acc, direction, index) => {
+                acc[direction] = sensoryReservoirSelection[index];
+                return acc;
+            }, {});
+        }
+
+        function moveSquare() {
+            lastTwoMovements.shift();
+            lastTwoMovements.push({ x: square.x, y: square.y });
+
+            const originalPosition = { x: square.x, y: square.y };
+
+            // Move the square according to the value of the assigned movement reservoirs
+            square.y -= directionReservoirs['N'].value;
+            square.y += directionReservoirs['S'].value;
+            square.x += directionReservoirs['E'].value;
+            square.x -= directionReservoirs['W'].value;
+
+            // Ensure the square stays within the canvas boundaries
+            square.x = Math.max(0, Math.min(canvas.width - square.size, square.x));
+            square.y = Math.max(0, Math.min(canvas.height - square.size, square.y));
+
+            // Determine the direction of movement
+            const deltaX = square.x - originalPosition.x;
+            const deltaY = square.y - originalPosition.y;
+
+            let movedDirection = '';
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                movedDirection = deltaX > 0 ? 'E' : 'W';
+            } else if (Math.abs(deltaY) > Math.abs(deltaX)) {
+                movedDirection = deltaY > 0 ? 'S' : 'N';
+            }
+
+            // Reward or punish neurons based on the sensory reservoir value
+            const tropismReservoir = sensoryReservoirs[tropism];
+            if (movedDirection === tropism) {
+                // Increment the sensory reservoir associated with the tropism
+                tropismReservoir.updateValue(4);
+            }
+
+            if (tropismReservoir.value > 2) {
+                batons.forEach(baton => {
+                    if (baton.active) baton.reinforce();
+                });
+            } else if (tropismReservoir.value === 0) {
+                batons.forEach(baton => {
+                    if (baton.active) baton.punish();
+                });
+            }
+        }
+
+        function isAtEdge() {
+            return (
+                square.x === 0 ||
+                square.x === canvas.width - square.size ||
+                square.y === 0 ||
+                square.y === canvas.height - square.size
+            );
+        }
+
+        function drawSquare() {
+            // Draw the square
+            ctx.fillStyle = BLACK;
+            ctx.fillRect(square.x, square.y, square.size, square.size);
+        }
+
+        function showBatonInfo(event) {
+            const mousePos = { x: event.offsetX, y: event.offsetY };
+            const clickedBatons = [];
+
+            // Find all batons whose info dot is near the clicked position
+            batons.forEach(baton => {
+                if (Math.abs(mousePos.x - baton.dotPos.x) <= 5 && Math.abs(mousePos.y - baton.dotPos.y) <= 5) {
+                    clickedBatons.push(baton);
+                }
+            });
+
+            if (clickedBatons.length > 0) {
+                batonInfo.style.display = 'block';
+                batonInfo.style.left = `${mousePos.x + 10}px`;
+                batonInfo.style.top = `${mousePos.y + 10}px`;
+
+                let infoHTML = '';
+                clickedBatons.forEach((baton, index) => {
+                    infoHTML += `<p><strong>Baton ${index + 1}</strong></p>`;
+                    infoHTML += `<p><strong>ID:</strong> ${baton.id}</p>`;
+                    infoHTML += `<p><strong>Type:</strong> ${baton.batonType}</p>`;
+                    infoHTML += `<p><strong>Threshold:</strong> ${baton.threshold}</p>`;
+                    infoHTML += `<p><strong>Hit Points:</strong> ${baton.hitPoints}</p>`;
+                    infoHTML += `<p><strong>Active:</strong> ${baton.active}</p>`;
+                    infoHTML += `<hr>`;
+                });
+
+                batonInfo.innerHTML = infoHTML;
+            } else {
+                batonInfo.style.display = 'none';
+            }
+        }
+
+        function startSimulation() {
+            const numReservoirs = parseInt(document.getElementById('numReservoirs').value) || 20;
+            const numBatons = parseInt(document.getElementById('numBatons').value) || 6;
+            const numPosBatons = parseInt(document.getElementById('numPosBatons').value) || 2;
+            const numNegBatons = parseInt(document.getElementById('numNegBatons').value) || 2;
+            const numPacemakerBatons = parseInt(document.getElementById('numPacemakerBatons').value) || 2;
+            reservoirMaxValue = parseInt(document.getElementById('reservoirMaxValue').value) || 4;
+            const posBatonThreshold = parseInt(document.getElementById('posBatonThreshold').value) || 2;
+            const negBatonThreshold = parseInt(document.getElementById('negBatonThreshold').value) || 2;
+            tropism = document.getElementById('tropism').value; // Get selected tropism
+
+            if (isNaN(numReservoirs) || isNaN(numBatons) || isNaN(numPosBatons) || isNaN(numNegBatons) || isNaN(numPacemakerBatons) || isNaN(reservoirMaxValue) || isNaN(posBatonThreshold) || isNaN(negBatonThreshold)) {
+                console.error('Error: One or more input values are not valid numbers.');
+                return;
+            }
+
+            const positions = arrangePositions(numReservoirs, canvas.width, canvas.height);
+            reservoirs = [];
+            for (let i = 0; i < numReservoirs; i++) {
+                reservoirs.push(new Reservoir(`reservoir${i + 1}`, positions[`reservoir${i + 1}`]));
+            }
+
+            batons = [];
+            for (let i = 0; i < numPosBatons; i++) {
+                batons.push(new Baton(posBatonThreshold, 'positive', i + 1));
+            }
+            for (let i = 0; i < numNegBatons; i++) {
+                batons.push(new Baton(negBatonThreshold, 'negative', numPosBatons + i + 1));
+            }
+            for (let i = 0; i < numPacemakerBatons; i++) {
+                batons.push(new Baton(null, 'pacemaker', numPosBatons + numNegBatons + i + 1));
+            }
+
+            assignDirectionAndSensoryReservoirs(); // Assign movement and sensory reservoirs separately
+
+            batons.forEach(baton => {
+                const startReservoir = reservoirs[Math.floor(Math.random() * reservoirs.length)];
+                const validEndReservoirs = reservoirs.filter(res => res !== startReservoir && !Object.values(sensoryReservoirs).includes(res));
+                if (validEndReservoirs.length > 0) {
+                    const endReservoir = validEndReservoirs[Math.floor(Math.random() * validEndReservoirs.length)];
+                    baton.connect(startReservoir, endReservoir);
+                }
+            });
+
+            simulate();
+        }
+
+        function simulate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            reservoirs.forEach(reservoir => {
+                let label = '';
+                let color = BLACK;
+                for (const [dir, res] of Object.entries(directionReservoirs)) {
+                    if (res === reservoir) {
+                        label = dir; // Label the movement reservoir
+                        color = BLACK; // Movement reservoir labels in black
+                    }
+                }
+                for (const [dir, res] of Object.entries(sensoryReservoirs)) {
+                    if (res === reservoir) {
+                        label = dir; // Label the sensory reservoir
+                        color = RED; // Sensory reservoir labels in red
+                    }
+                }
+                reservoir.fade();
+                reservoir.draw(label, color);
+            });
+
+            batons.forEach(baton => baton.transmitSignal());
+            batons.forEach(baton => {
+                if (baton.hitPoints <= 0) {
+                    baton.relocate();
+                }
+            });
+
+            batons.forEach(baton => baton.draw());
+
+            moveSquare(); // Move the square based on movement reservoir values
+            drawSquare(); // Draw the square
+
+            requestAnimationFrame(simulate);
+        }
+
+        canvas.addEventListener('mousedown', showBatonInfo);
+
+    </script>
+</body>
+</html>
