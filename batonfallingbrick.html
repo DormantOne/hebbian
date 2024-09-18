@@ -1,0 +1,601 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Neural Network Visualization with Brick-Dodge Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            position: relative;
+        }
+
+        #controls {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        #canvasContainer {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        canvas {
+            border: 1px solid black;
+            margin: 0;
+        }
+
+        .floating-window {
+            position: absolute;
+            background-color: white;
+            border: 1px solid black;
+            padding: 10px;
+            display: none;
+        }
+
+        #stats {
+            margin-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <label for="numReservoirs">Number of reservoirs:</label>
+        <input type="number" id="numReservoirs" value="10">
+        <label for="numBatons">Number of batons:</label>
+        <input type="number" id="numBatons" value="12">
+        <label for="numPosBatons">Number of positive batons:</label>
+        <input type="number" id="numPosBatons" value="6">
+        <label for="numNegBatons">Number of negative batons:</label>
+        <input type="number" id="numNegBatons" value="4">
+        <label for="numPacemakerBatons">Number of pacemaker batons:</label>
+        <input type="number" id="numPacemakerBatons" value="2">
+        <label for="reservoirMaxValue">Reservoir max value:</label>
+        <input type="number" id="reservoirMaxValue" value="4">
+        <label for="posBatonThreshold">Positive baton threshold:</label>
+        <input type="number" id="posBatonThreshold" value="2">
+        <label for="negBatonThreshold">Negative baton threshold:</label>
+        <input type="number" id="negBatonThreshold" value="2">
+        <label for="visualContribution">Visual receptor contribution:</label>
+        <input type="number" id="visualContribution" value="2">
+        <br><br>
+        <label for="rewardValue">Reward value:</label>
+        <input type="number" id="rewardValue" value="1">
+        <label for="punishmentValue">Punishment value:</label>
+        <input type="number" id="punishmentValue" value="0.5">
+        <button onclick="startSimulation()">Start Simulation</button>
+    </div>
+
+    <div id="canvasContainer">
+        <canvas id="neuralCanvas" width="600" height="600"></canvas>
+        <canvas id="gameCanvas" width="300" height="500"></canvas>
+        <div id="stats"></div>
+    </div>
+
+    <div id="batonInfo" class="floating-window"></div>
+
+    <script>
+        // Canvas setup
+        const neuralCanvas = document.getElementById('neuralCanvas');
+        const neuralCtx = neuralCanvas.getContext('2d');
+
+        const gameCanvas = document.getElementById('gameCanvas');
+        const gameCtx = gameCanvas.getContext('2d');
+
+        const batonInfo = document.getElementById('batonInfo');
+        const statsDiv = document.getElementById('stats');
+
+        // Constants
+        const WHITE = '#FFFFFF';
+        const BLACK = '#000000';
+        const GRAY = '#C8C8C8';
+        const RED = '#FF0000';
+        const GREEN = '#00FF00';
+        const BLUE = '#0000FF';
+        const YELLOW = '#FFFF00';
+
+        // Game variables
+        const GRID_COLS = 3;
+        const GRID_ROWS = 5;
+        const CELL_SIZE = 100; // Adjusted for larger gameCanvas
+        let creaturePosition = 1; // 0: left, 1: middle, 2: right
+        let fallingBricks = [];
+        let visualReceptors = [
+            [0, 0, 0], // First row above creature
+            [0, 0, 0]  // Second row above creature
+        ];
+        let score = 0;
+
+        // Neural network variables
+        let reservoirs = [];
+        let batons = [];
+        let reservoirMaxValue;
+        let visualContribution;
+        let rewardValue;
+        let punishmentValue;
+
+        let visualReservoirs = []; // Six visual receptor reservoirs
+        let movementReservoirs = []; // Four movement reservoirs (two left, two right)
+
+        class Reservoir {
+            constructor(name, pos) {
+                this.name = name;
+                this.pos = pos;
+                this.value = 0;
+                this.inputs = [];
+                this.outputs = [];
+            }
+
+            addInput(baton) {
+                this.inputs.push(baton);
+            }
+
+            addOutput(baton) {
+                this.outputs.push(baton);
+            }
+
+            updateValue(signal) {
+                this.value += signal;
+                this.value = Math.max(0, Math.min(this.value, reservoirMaxValue));
+            }
+
+            fade() {
+                this.value -= 1;
+                this.value = Math.max(0, this.value);
+            }
+
+            draw(label, color = BLACK) {
+                let fillColor;
+                switch (this.value) {
+                    case 0: fillColor = GRAY; break;
+                    case 1: fillColor = YELLOW; break;
+                    case 2: fillColor = GREEN; break;
+                    case 3: fillColor = BLUE; break;
+                    case 4:
+                    default: fillColor = RED; break;
+                }
+                neuralCtx.beginPath();
+                neuralCtx.arc(this.pos.x, this.pos.y, 40, 0, Math.PI * 2);
+                neuralCtx.fillStyle = fillColor;
+                neuralCtx.fill();
+                neuralCtx.lineWidth = 2;
+                neuralCtx.strokeStyle = BLACK;
+                neuralCtx.stroke();
+                neuralCtx.closePath();
+
+                neuralCtx.font = '14px Arial';
+                neuralCtx.fillStyle = BLACK;
+                neuralCtx.textAlign = 'center';
+                neuralCtx.textBaseline = 'middle';
+                neuralCtx.fillText(this.name, this.pos.x, this.pos.y - 50); // Reservoir name
+
+                // Draw the label if provided
+                if (label) {
+                    neuralCtx.font = '16px Arial';
+                    neuralCtx.fillStyle = color;
+                    neuralCtx.fillText(label, this.pos.x, this.pos.y + 50); // Adjust position as needed
+                }
+            }
+        }
+
+        class Baton {
+            constructor(threshold, batonType = 'positive', id) {
+                this.id = id;
+                this.threshold = threshold;
+                this.batonType = batonType;
+                this.hitPoints = 10;
+                this.stepsSinceLastSignal = 0;
+                this.startReservoir = null;
+                this.endReservoir = null;
+                this.active = false;
+                this.dotPos = { x: 0, y: 0 }; // Position for the info dot
+            }
+
+            connect(startReservoir, endReservoir) {
+                if (endReservoir === undefined) {
+                    return;
+                }
+
+                this.startReservoir = startReservoir;
+                this.endReservoir = endReservoir;
+                startReservoir.addOutput(this);
+                endReservoir.addInput(this);
+
+                // Position the info dot near the start reservoir
+                this.dotPos = {
+                    x: (this.startReservoir.pos.x + this.endReservoir.pos.x) / 2,
+                    y: (this.startReservoir.pos.y + this.endReservoir.pos.y) / 2
+                };
+            }
+
+            transmitSignal() {
+                this.stepsSinceLastSignal++;
+
+                if (this.batonType === 'pacemaker' && this.stepsSinceLastSignal % 3 !== 0) {
+                    this.active = false;
+                    return 0;
+                }
+
+                if (this.batonType === 'pacemaker' || this.startReservoir.value > this.threshold) {
+                    let signal = 1;
+                    if (this.batonType === 'negative') {
+                        signal = -1;
+                    } else if (this.batonType === 'pacemaker') {
+                        signal = 1;
+                    }
+
+                    if (this.hitPoints > 10) {
+                        signal *= 2;
+                    }
+
+                    this.endReservoir.updateValue(signal);
+                    this.active = true;
+                    return signal;
+                } else {
+                    this.active = false;
+                    return 0;
+                }
+            }
+
+            reinforce() {
+                this.hitPoints = Math.min(this.hitPoints + rewardValue, 100); // Cap hit points at 100
+            }
+
+            punish() {
+                this.hitPoints = Math.max(this.hitPoints - punishmentValue, 0); // Decrease hit points, but ensure it doesn't go below 0
+            }
+
+            relocate() {
+                const highReservoirs = reservoirs.filter(res => res.value > 2 && !visualReservoirs.includes(res));
+                const lowReservoirs = reservoirs.filter(res => res.value < 2 && !visualReservoirs.includes(res));
+
+                if (highReservoirs.length && lowReservoirs.length) {
+                    const newStart = highReservoirs[Math.floor(Math.random() * highReservoirs.length)];
+                    const newEnd = lowReservoirs[Math.floor(Math.random() * lowReservoirs.length)];
+                    this.connect(newStart, newEnd);
+                } else {
+                    const validReservoirs = reservoirs.filter(res => !visualReservoirs.includes(res));
+                    const newStart = validReservoirs[Math.floor(Math.random() * validReservoirs.length)];
+                    const newEnd = validReservoirs.filter(r => r !== newStart)[Math.floor(Math.random() * (validReservoirs.length - 1))];
+                    this.connect(newStart, newEnd);
+                }
+
+                this.respawn();
+            }
+
+            respawn() {
+                this.hitPoints = 10;
+            }
+
+            draw() {
+                let color;
+                if (this.batonType === 'positive') {
+                    color = GREEN;
+                } else if (this.batonType === 'negative') {
+                    color = RED;
+                } else if (this.batonType === 'pacemaker') {
+                    color = BLUE;
+                }
+
+                const thickness = this.active ? 6 : this.hitPoints <= 10 ? 2 : 4;
+
+                neuralCtx.beginPath();
+                neuralCtx.moveTo(this.startReservoir.pos.x, this.startReservoir.pos.y);
+                neuralCtx.lineTo(this.endReservoir.pos.x, this.endReservoir.pos.y);
+                neuralCtx.lineWidth = thickness;
+                neuralCtx.strokeStyle = color;
+                neuralCtx.stroke();
+                neuralCtx.closePath();
+
+                // Draw arrowheads
+                const angle = Math.atan2(this.endReservoir.pos.y - this.startReservoir.pos.y, this.endReservoir.pos.x - this.startReservoir.pos.x);
+                const endX = this.endReservoir.pos.x - 40 * Math.cos(angle);
+                const endY = this.endReservoir.pos.y - 40 * Math.sin(angle);
+                neuralCtx.beginPath();
+                neuralCtx.moveTo(endX, endY);
+                neuralCtx.lineTo(endX - 10 * Math.cos(angle - Math.PI / 6), endY - 10 * Math.sin(angle - Math.PI / 6));
+                neuralCtx.lineTo(endX - 10 * Math.cos(angle + Math.PI / 6), endY - 10 * Math.sin(angle + Math.PI / 6));
+                neuralCtx.closePath();
+                neuralCtx.fillStyle = color;
+                neuralCtx.fill();
+
+                // Draw info dot
+                neuralCtx.beginPath();
+                neuralCtx.arc(this.dotPos.x, this.dotPos.y, 5, 0, Math.PI * 2);
+                neuralCtx.fillStyle = color;
+                neuralCtx.fill();
+                neuralCtx.closePath();
+            }
+        }
+
+        // Game functions
+        function initializeFallingBricks() {
+            fallingBricks = [];
+            const x = Math.floor(Math.random() * GRID_COLS);
+            fallingBricks.push({ x: x, y: 0, color: 'red' });
+        }
+
+        function updateFallingBricks() {
+            for (let brick of fallingBricks) {
+                brick.y += 1;
+                if (brick.y >= GRID_ROWS) {
+                    score++;
+                    brick.y = 0;
+                    brick.x = Math.floor(Math.random() * GRID_COLS);
+                    brick.color = 'red';
+                }
+            }
+        }
+
+        function updateVisualReceptors() {
+            // Reset visual receptors
+            visualReceptors = [
+                [0, 0, 0],
+                [0, 0, 0]
+            ];
+
+            // Update visual receptors based on brick positions
+            for (let brick of fallingBricks) {
+                if (brick.y === GRID_ROWS - 3) {
+                    visualReceptors[0][brick.x] = 1;
+                } else if (brick.y === GRID_ROWS - 2) {
+                    visualReceptors[1][brick.x] = 1;
+                }
+            }
+
+            // Update corresponding reservoirs
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 3; j++) {
+                    if (visualReceptors[i][j] === 1) {
+                        visualReservoirs[i * 3 + j].updateValue(visualContribution);
+                    }
+                }
+            }
+        }
+
+        function moveCreature() {
+            // Calculate net effect from movement reservoirs
+            const leftValue = movementReservoirs[0].value + movementReservoirs[1].value;
+            const rightValue = movementReservoirs[2].value + movementReservoirs[3].value;
+
+            if (leftValue > rightValue && creaturePosition > 0) {
+                creaturePosition--;
+            } else if (rightValue > leftValue && creaturePosition < 2) {
+                creaturePosition++;
+            }
+
+            // Check for collision
+            for (let brick of fallingBricks) {
+                if (brick.y === GRID_ROWS - 1 && brick.x === creaturePosition) {
+                    // Collision occurred
+                    batons.forEach(baton => {
+                        if (baton.active) baton.punish();
+                    });
+                    score = 0; // Reset score
+                    return false;
+                }
+            }
+
+            // Successful move, reinforce active batons
+            batons.forEach(baton => {
+                if (baton.active) baton.reinforce();
+            });
+
+            return true;
+        }
+
+        function drawGame() {
+            gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+            // Draw grid
+            gameCtx.strokeStyle = 'black';
+            for (let i = 0; i <= GRID_COLS; i++) {
+                gameCtx.beginPath();
+                gameCtx.moveTo(i * CELL_SIZE, 0);
+                gameCtx.lineTo(i * CELL_SIZE, gameCanvas.height);
+                gameCtx.stroke();
+            }
+            for (let i = 0; i <= GRID_ROWS; i++) {
+                gameCtx.beginPath();
+                gameCtx.moveTo(0, i * CELL_SIZE);
+                gameCtx.lineTo(gameCanvas.width, i * CELL_SIZE);
+                gameCtx.stroke();
+            }
+
+            // Draw visual receptors
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < GRID_COLS; j++) {
+                    if (visualReceptors[i][j] === 1) {
+                        gameCtx.fillStyle = 'orange';
+                    } else {
+                        gameCtx.fillStyle = 'yellow';
+                    }
+                    gameCtx.fillRect(j * CELL_SIZE, (GRID_ROWS - 3 + i) * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                }
+            }
+
+            // Draw falling bricks
+            for (let brick of fallingBricks) {
+                gameCtx.fillStyle = brick.color;
+                gameCtx.fillRect(brick.x * CELL_SIZE, brick.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            }
+
+            // Draw creature
+            gameCtx.fillStyle = 'blue';
+            gameCtx.fillRect(creaturePosition * CELL_SIZE, (GRID_ROWS - 1) * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+        }
+
+        function showBatonInfo(event) {
+            const rect = neuralCanvas.getBoundingClientRect();
+            const mousePos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+            const clickedBatons = [];
+
+            // Find all batons whose info dot is near the clicked position
+            batons.forEach(baton => {
+                if (Math.abs(mousePos.x - baton.dotPos.x) <= 5 && Math.abs(mousePos.y - baton.dotPos.y) <= 5) {
+                    clickedBatons.push(baton);
+                }
+            });
+
+            if (clickedBatons.length > 0) {
+                batonInfo.style.display = 'block';
+                batonInfo.style.left = `${event.pageX + 10}px`;
+                batonInfo.style.top = `${event.pageY + 10}px`;
+
+                let infoHTML = '';
+                clickedBatons.forEach((baton, index) => {
+                    infoHTML += `<p><strong>Baton ${index + 1}</strong></p>`;
+                    infoHTML += `<p><strong>ID:</strong> ${baton.id}</p>`;
+                    infoHTML += `<p><strong>Type:</strong> ${baton.batonType}</p>`;
+                    infoHTML += `<p><strong>Threshold:</strong> ${baton.threshold}</p>`;
+                    infoHTML += `<p><strong>Hit Points:</strong> ${baton.hitPoints}</p>`;
+                    infoHTML += `<p><strong>Active:</strong> ${baton.active}</p>`;
+                    infoHTML += `<hr>`;
+                });
+
+                batonInfo.innerHTML = infoHTML;
+            } else {
+                batonInfo.style.display = 'none';
+            }
+        }
+
+        function startSimulation() {
+            const numReservoirs = parseInt(document.getElementById('numReservoirs').value) || 10;
+            const numBatons = parseInt(document.getElementById('numBatons').value) || 12;
+            const numPosBatons = parseInt(document.getElementById('numPosBatons').value) || 6;
+            const numNegBatons = parseInt(document.getElementById('numNegBatons').value) || 4;
+            const numPacemakerBatons = parseInt(document.getElementById('numPacemakerBatons').value) || 2;
+            reservoirMaxValue = parseInt(document.getElementById('reservoirMaxValue').value) || 4;
+            const posBatonThreshold = parseInt(document.getElementById('posBatonThreshold').value) || 2;
+            const negBatonThreshold = parseInt(document.getElementById('negBatonThreshold').value) || 2;
+            visualContribution = parseInt(document.getElementById('visualContribution').value) || 2;
+            rewardValue = parseFloat(document.getElementById('rewardValue').value) || 1;
+            punishmentValue = parseFloat(document.getElementById('punishmentValue').value) || 0.5;
+
+            if (isNaN(numReservoirs) || isNaN(numBatons) || isNaN(numPosBatons) || isNaN(numNegBatons) || isNaN(numPacemakerBatons) || isNaN(reservoirMaxValue) || isNaN(posBatonThreshold) || isNaN(negBatonThreshold) || isNaN(visualContribution) || isNaN(rewardValue) || isNaN(punishmentValue)) {
+                console.error('Error: One or more input values are not valid numbers.');
+                return;
+            }
+
+            const positions = arrangePositions(numReservoirs, neuralCanvas.width, neuralCanvas.height);
+            reservoirs = [];
+            for (let i = 0; i < numReservoirs; i++) {
+                reservoirs.push(new Reservoir(`Reservoir${i + 1}`, positions[`reservoir${i + 1}`]));
+            }
+
+            // Assign visual and movement reservoirs
+            assignVisualAndMovementReservoirs();
+
+            // Initialize batons
+            batons = [];
+            let batonId = 1;
+            for (let i = 0; i < numPosBatons; i++) {
+                batons.push(new Baton(posBatonThreshold, 'positive', batonId++));
+            }
+            for (let i = 0; i < numNegBatons; i++) {
+                batons.push(new Baton(negBatonThreshold, 'negative', batonId++));
+            }
+            for (let i = 0; i < numPacemakerBatons; i++) {
+                batons.push(new Baton(null, 'pacemaker', batonId++));
+            }
+
+            // Connect batons randomly
+            batons.forEach(baton => {
+                const startReservoir = reservoirs[Math.floor(Math.random() * reservoirs.length)];
+                const validEndReservoirs = reservoirs.filter(res => res !== startReservoir && !visualReservoirs.includes(res));
+                if (validEndReservoirs.length > 0) {
+                    const endReservoir = validEndReservoirs[Math.floor(Math.random() * validEndReservoirs.length)];
+                    baton.connect(startReservoir, endReservoir);
+                }
+            });
+
+            initializeFallingBricks();
+            simulate();
+        }
+
+        function arrangePositions(numReservoirs, width, height) {
+            const positions = {};
+            const rows = Math.floor(Math.sqrt(numReservoirs));
+            const cols = Math.ceil(numReservoirs / rows);
+            const margin = 50;
+            const rowHeight = (height - 2 * margin) / rows;
+            const colWidth = (width - 2 * margin) / cols;
+
+            for (let i = 0; i < numReservoirs; i++) {
+                const row = Math.floor(i / cols);
+                const col = i % cols;
+                const x = margin + col * colWidth + colWidth / 2;
+                const y = margin + row * rowHeight + rowHeight / 2;
+                positions[`reservoir${i + 1}`] = { x, y };
+            }
+            return positions;
+        }
+
+        function assignVisualAndMovementReservoirs() {
+            // Assign the first 6 reservoirs as visual receptors
+            visualReservoirs = reservoirs.slice(0, 6);
+            for (let i = 0; i < 6; i++) {
+                visualReservoirs[i].name = `V${i + 1}`;
+            }
+
+            // Assign the next 4 reservoirs as movement reservoirs
+            movementReservoirs = reservoirs.slice(6, 10);
+            movementReservoirs[0].name = 'Left1';
+            movementReservoirs[1].name = 'Left2';
+            movementReservoirs[2].name = 'Right1';
+            movementReservoirs[3].name = 'Right2';
+        }
+
+        function simulate() {
+            neuralCtx.clearRect(0, 0, neuralCanvas.width, neuralCanvas.height);
+
+            reservoirs.forEach(reservoir => {
+                let label = '';
+                let color = BLACK;
+                if (visualReservoirs.includes(reservoir)) {
+                    color = RED;
+                } else if (movementReservoirs.includes(reservoir)) {
+                    color = BLUE;
+                }
+                reservoir.fade();
+                reservoir.draw(label, color);
+            });
+
+            batons.forEach(baton => baton.transmitSignal());
+            batons.forEach(baton => {
+                if (baton.hitPoints <= 0) {
+                    baton.relocate();
+                }
+            });
+
+            batons.forEach(baton => baton.draw());
+
+            // Game logic
+            updateFallingBricks();
+            updateVisualReceptors();
+            if (moveCreature()) {
+                drawGame();
+                updateStats();
+                requestAnimationFrame(simulate);
+            } else {
+                console.log('Game Over! Final Score: ' + score);
+                initializeFallingBricks();
+                creaturePosition = 1;
+                score = 0;
+                simulate();
+            }
+        }
+
+        function updateStats() {
+            statsDiv.innerHTML = `
+                <h3>Game Stats</h3>
+                <p>Score: ${score}</p>
+            `;
+        }
+
+        neuralCanvas.addEventListener('mousedown', showBatonInfo);
+    </script>
+</body>
+</html>
