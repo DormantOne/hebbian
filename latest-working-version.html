@@ -683,28 +683,8 @@ ${configReadingErrors.join("\n")}
           return;
         }
 
-        // const numReservoirs = parseInt(document.getElementById('numReservoirs').value) || 20;
-        // const numBatons = parseInt(document.getElementById('numBatons').value) || 20;
-        // const numPosBatons = parseInt(document.getElementById('numPosBatons').value) || 10;
-        // const numNegBatons = parseInt(document.getElementById('numNegBatons').value) || 6;
-        // const numPacemakerBatons = parseInt(document.getElementById('numPacemakerBatons').value) || 4;
-        // reservoirMaxValue = parseInt(document.getElementById('reservoirMaxValue').value) || 4;
-        // const posBatonThreshold = parseInt(document.getElementById('posBatonThreshold').value) || 2;
-        // const negBatonThreshold = parseInt(document.getElementById('negBatonThreshold').value) || 2;
-        // visualContribution = parseInt(document.getElementById('visualContribution').value) || 2;
-        // rewardValue = parseFloat(document.getElementById('rewardValue').value) || 1;
-        // punishmentValue = parseFloat(document.getElementById('punishmentValue').value) || 0.5;
-        // GRID_COLS = parseInt(document.getElementById('gridCols').value) || 5;
-        // GRID_ROWS = parseInt(document.getElementById('gridRows').value) || 7;
-        // maxNumSimultaneousBricks = parseInt(document.getElementById('maxNumSimultaneousBricks').value) || 2;
-        // numVisualRows = parseInt(document.getElementById('numVisualRows').value) || 2;
-        // numLeftMovementReservoirs = parseInt(document.getElementById('numLeftMovementReservoirs').value) || 2;
-        // numRightMovementReservoirs = parseInt(document.getElementById('numRightMovementReservoirs').value) || 2;
-
-        // if (isNaN(numReservoirs) || isNaN(numBatons) || isNaN(numPosBatons) || isNaN(numNegBatons) || isNaN(numPacemakerBatons) || isNaN(reservoirMaxValue) || isNaN(posBatonThreshold) || isNaN(negBatonThreshold) || isNaN(visualContribution) || isNaN(rewardValue) || isNaN(punishmentValue) || isNaN(GRID_COLS) || isNaN(GRID_ROWS) || isNaN(numVisualRows) || isNaN(numLeftMovementReservoirs) || isNaN(numRightMovementReservoirs)) {
-        //     console.error('Error: One or more input values are not valid numbers.');
-        //     return;
-        // }
+        score = 0
+        bestScore = 0
 
         const totalSpecialReservoirs =
           numVisualRows * GRID_COLS +
