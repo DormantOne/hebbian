@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Neural Network Visualization with Brick-Dodge Game</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        position: relative;
+      }
+
+      #controls {
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      #canvasContainer {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+      }
+
+      canvas {
+        border: 1px solid black;
+        margin: 0;
+      }
+
+      .floating-window {
+        position: absolute;
+        background-color: white;
+        border: 1px solid black;
+        padding: 10px;
+        display: none;
+      }
+
+      #stats {
+        margin-left: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="controls">
+      <label for="numReservoirs">Number of reservoirs:</label>
+      <input type="number" id="numReservoirs" value="50" />
+      <label for="numPosBatons">Number of positive batons:</label>
+      <input type="number" id="numPosBatons" value="180" />
+      <label for="numNegBatons">Number of negative batons:</label>
+      <input type="number" id="numNegBatons" value="20" />
+      <label for="numPacemakerBatons">Number of pacemaker batons:</label>
+      <input type="number" id="numPacemakerBatons" value="4" />
+      <label for="fadeRate">Fade Rate:</label>
+      <input type="number" id="fadeRate" value="0.25" />
+      <label for="batonSurvivalStrength">Baton Survival Strength:</label>
+      <input type="number" id="batonSurvivalStrength" value="0.125" />
+      <label for="batonHighCutoff">Baton High Cutoff:</label>
+      <input type="number" id="batonHighCutoff" value="0.4" />
+      <label for="visualContribution">Visual Receptor Stimulation:</label>
+      <input type="number" id="visualContribution" value="1.0" />
+      <br /><br />
+      <label for="rewardValue">Reward value:</label>
+      <input type="number" id="rewardValue" value="0.1" />
+      <label for="punishmentValue">Punishment value:</label>
+      <input type="number" id="punishmentValue" value="0.5" />
+      <br /><br />
+      <label for="gridCols">Grid columns:</label>
+      <input type="number" id="gridCols" value="5" />
+      <label for="gridRows">Grid rows:</label>
+      <input type="number" id="gridRows" value="9" />
+      <label for="maxNumSimultaneousBricks"
+        >Max Number of simultaneous bricks:</label
+      >
+      <input type="number" id="maxNumSimultaneousBricks" value="2" />
+      <label for="numVisualRows">Visual receptor rows:</label>
+      <input type="number" id="numVisualRows" value="4" />
+      <label for="numLeftMovementReservoirs"
+        >Number of left movement reservoirs:</label
+      >
+      <input type="number" id="numLeftMovementReservoirs" value="2" />
+      <label for="numRightMovementReservoirs"
+        >Number of right movement reservoirs:</label
+      >
+      <input type="number" id="numRightMovementReservoirs" value="2" />
+      <br /><br />
+      <button onclick="startSimulation()">Start Simulation</button>
+    </div>
+
+    <div id="canvasContainer">
+      <canvas id="neuralCanvas" width="600" height="600"></canvas>
+      <canvas id="gameCanvas" width="500" height="700"></canvas>
+      <div id="stats"></div>
+    </div>
+
+    <div id="batonInfo" class="floating-window"></div>
+
+    <script>
+
+      function sigmoid(x){
+        return 1 / (1 + Math.exp(-x))
+      }
+
+      // Canvas setup
+      const neuralCanvas = document.getElementById("neuralCanvas");
+      const neuralCtx = neuralCanvas.getContext("2d");
+
+      const gameCanvas = document.getElementById("gameCanvas");
+      const gameCtx = gameCanvas.getContext("2d");
+
+      const batonInfo = document.getElementById("batonInfo");
+      const statsDiv = document.getElementById("stats");
+
+      // Constants
+      const WHITE = "#FFFFFF";
+      const BLACK = "#000000";
+      const GRAY = "#C8C8C8";
+      const RED = "#FF0000";
+      const GREEN = "#00FF00";
+      const BLUE = "#0000FF";
+      const YELLOW = "#FFFF00";
+
+      // Game variables
+      let CELL_SIZE;
+      let creaturePosition;
+      let fallingBricks = [];
+      let visualReceptors = [];
+      let score = 0;
+      let bestScore = 0;
+      let reservoirs = [];
+      let batons = [];
+      let visualReservoirs = [];
+      let movementReservoirs = [];
+      let numReservoirs;
+      let numPosBatons;
+      let numNegBatons;
+      let numPacemakerBatons;
+      let batonSurvivalStrength;
+      let visualContribution;
+      let rewardValue;
+      let punishmentValue;
+      let GRID_COLS;
+      let GRID_ROWS;
+      let maxNumSimultaneousBricks;
+      let numVisualRows;
+      let numLeftMovementReservoirs;
+      let numRightMovementReservoirs;
+      let fadeRate;
+      let highBatonCutoff;
+
+
+      class Reservoir {
+        constructor(name, pos) {
+          this.name = name;
+          this.pos = pos;
+          this.value = 0;
+          this.inputs = [];
+          this.outputs = [];
+        }
+
+        addInput(baton) {
+          this.inputs.push(baton);
+        }
+
+        addOutput(baton) {
+          this.outputs.push(baton);
+        }
+
+        updateValue(signal) {
+          this.value += signal
+        }
+
+        fade() {
+          this.value = sigmoid(this.value-fadeRate)
+        }
+
+        draw(label, color = BLACK) {
+          let fillColor;
+          switch (this.value) {
+            case 0:
+              fillColor = GRAY;
+              break;
+            case 1:
+              fillColor = YELLOW;
+              break;
+            case 2:
+              fillColor = GREEN;
+              break;
+            case 3:
+              fillColor = BLUE;
+              break;
+            case 4:
+            default:
+              fillColor = RED;
+              break;
+          }
+          neuralCtx.beginPath();
+          neuralCtx.arc(this.pos.x, this.pos.y, 40, 0, Math.PI * 2);
+          neuralCtx.fillStyle = fillColor;
+          neuralCtx.fill();
+          neuralCtx.lineWidth = 2;
+          neuralCtx.strokeStyle = BLACK;
+          neuralCtx.stroke();
+          neuralCtx.closePath();
+
+          neuralCtx.font = "14px Arial";
+          neuralCtx.fillStyle = BLACK;
+          neuralCtx.textAlign = "center";
+          neuralCtx.textBaseline = "middle";
+          neuralCtx.fillText(this.name, this.pos.x, this.pos.y - 50); // Reservoir name
+
+          // Draw the label if provided
+          if (label) {
+            neuralCtx.font = "16px Arial";
+            neuralCtx.fillStyle = color;
+            neuralCtx.fillText(label, this.pos.x, this.pos.y + 50); // Adjust position as needed
+          }
+        }
+      }
+
+      class Baton {
+        constructor(batonType = "positive", id) {
+          this.id = id;
+          this.isPacemaker = batonType === "pacemaker"
+          this.strength = (batonType==="pacemaker")?(1):(
+            batonType==="positive" ? 1 : -1
+          )
+          this.hitPoints = 10;
+          this.stepsSinceLastSignal = 0;
+          this.startReservoir = null;
+          this.endReservoir = null;
+          this.active = false;
+          this.dotPos = { x: 0, y: 0 }; // Position for the info dot
+        }
+
+        connect(startReservoir, endReservoir) {
+          if (endReservoir === undefined) {
+            return;
+          }
+
+          this.startReservoir = startReservoir;
+          this.endReservoir = endReservoir;
+          startReservoir.addOutput(this);
+          endReservoir.addInput(this);
+
+          // Position the info dot near the start reservoir
+          this.dotPos = {
+            x: (this.startReservoir.pos.x + this.endReservoir.pos.x) / 2,
+            y: (this.startReservoir.pos.y + this.endReservoir.pos.y) / 2,
+          };
+        }
+
+        transmitSignal() {
+
+
+          if (
+              this.active || (this.isPacemaker && this.stepsSinceLastSignal %3 === 0)
+          ) {
+            const signal = this.strength*sigmoid(this.startReservoir.value*this.strength)
+            this.endReservoir.updateValue(signal);
+            this.stepsSinceLastSignal = 0;
+
+            return signal;
+          } 
+
+          this.stepsSinceLastSignal++;
+
+        }
+
+        reinforce() {
+          // todo
+        }
+
+        punish() {
+           // todo
+        }
+
+        relocate() {
+          const highReservoirs = reservoirs.filter(
+            (res) => Math.abs(res.value) > highBatonCutoff  && !visualReservoirs.includes(res)
+          );
+          const lowReservoirs = reservoirs.filter(
+            (res) => Math.abs(res.value) < highBatonCutoff && !visualReservoirs.includes(res)
+          );
+
+          const reservoirIsConnected = (reservoirObject) => {
+            for (let baton of batons) {
+              if (
+                baton.startReservoir.name === reservoirObject.name ||
+                (baton.endReservoir === reservoirObject.name && baton.active)
+              ) {
+                return true;
+              }
+            }
+            return false;
+          };
+
+          const getUnconnectedVisualReservoirs = () => {
+            const filteredSubset = visualReservoirs.filter((res) => {
+              return !reservoirIsConnected(res);
+            });
+            return filteredSubset;
+          };
+
+          const getRandomVisualReservoir = () => {
+            const options = getUnconnectedVisualReservoirs();
+            if (options.length === 0) {
+              return null;
+            }
+            return options[Math.floor(Math.random() * options.length)];
+          };
+
+          const rvr = getRandomVisualReservoir();
+
+          if (rvr) {
+            const newStart = rvr;
+            this.connect(newStart, this.endReservoir);
+          } else {
+            if (highReservoirs.length && lowReservoirs.length) {
+              const newStart =
+                highReservoirs[
+                  Math.floor(Math.random() * highReservoirs.length)
+                ];
+              const newEnd =
+                lowReservoirs[Math.floor(Math.random() * lowReservoirs.length)];
+              this.connect(newStart, newEnd);
+            } else {
+              const validReservoirs = reservoirs.filter(
+                (res) => !visualReservoirs.includes(res)
+              );
+              const newStart =
+                validReservoirs[
+                  Math.floor(Math.random() * validReservoirs.length)
+                ];
+              const newEnd = validReservoirs.filter((r) => r !== newStart)[
+                Math.floor(Math.random() * (validReservoirs.length - 1))
+              ];
+              this.connect(newStart, newEnd);
+            }
+          }
+
+          this.respawn();
+        }
+
+        respawn() {
+          this.hitPoints = 10;
+        }
+
+        draw() {
+          let color;
+          if (this.batonType === "pacemaker") {
+            color = BLUE;
+          } else {
+            color = "black";
+          }
+
+          const thickness = this.active ? 6 : this.hitPoints <= 10 ? 2 : 4;
+
+          neuralCtx.beginPath();
+          neuralCtx.moveTo(
+            this.startReservoir.pos.x,
+            this.startReservoir.pos.y
+          );
+          neuralCtx.lineTo(this.endReservoir.pos.x, this.endReservoir.pos.y);
+          neuralCtx.lineWidth = thickness;
+          neuralCtx.strokeStyle = color;
+          neuralCtx.stroke();
+          neuralCtx.closePath();
+
+          // Draw arrowheads
+          const angle = Math.atan2(
+            this.endReservoir.pos.y - this.startReservoir.pos.y,
+            this.endReservoir.pos.x - this.startReservoir.pos.x
+          );
+          const endX = this.endReservoir.pos.x - 40 * Math.cos(angle);
+          const endY = this.endReservoir.pos.y - 40 * Math.sin(angle);
+          neuralCtx.beginPath();
+          neuralCtx.moveTo(endX, endY);
+          neuralCtx.lineTo(
+            endX - 10 * Math.cos(angle - Math.PI / 6),
+            endY - 10 * Math.sin(angle - Math.PI / 6)
+          );
+          neuralCtx.lineTo(
+            endX - 10 * Math.cos(angle + Math.PI / 6),
+            endY - 10 * Math.sin(angle + Math.PI / 6)
+          );
+          neuralCtx.closePath();
+          neuralCtx.fillStyle = color;
+          neuralCtx.fill();
+
+          // Draw info dot
+          neuralCtx.beginPath();
+          neuralCtx.arc(this.dotPos.x, this.dotPos.y, 5, 0, Math.PI * 2);
+          neuralCtx.fillStyle = color;
+          neuralCtx.fill();
+          neuralCtx.closePath();
+        }
+      }
+
+      function initializeFallingBricks() {
+        fallingBricks = [];
+        new Array(maxNumSimultaneousBricks).fill(0).forEach(() => {
+          const x = Math.floor(Math.random() * GRID_COLS);
+          const y = Math.floor(Math.random() * (GRID_ROWS - numVisualRows - 1));
+          fallingBricks.push({ x, y, color: "red" });
+        });
+      }
+
+      function updateFallingBricks() {
+        for (let brick of fallingBricks) {
+          brick.y += 1;
+          if (brick.y >= GRID_ROWS) {
+            score++;
+            if (score > bestScore) {
+              bestScore = score;
+            }
+            brick.y = 0;
+            brick.x = Math.floor(Math.random() * GRID_COLS);
+            brick.color = "red";
+          }
+        }
+      }
+
+      function updateVisualReceptors() {
+        // Reset visual receptors
+        visualReceptors = [];
+        for (let i = 0; i < numVisualRows; i++) {
+          visualReceptors.push(new Array(GRID_COLS).fill(0));
+        }
+
+        // Update visual receptors based on brick positions
+        for (let brick of fallingBricks) {
+          let receptorRow = brick.y - (GRID_ROWS - numVisualRows - 1);
+          if (receptorRow >= 0 && receptorRow < numVisualRows) {
+            visualReceptors[receptorRow][brick.x] = 1;
+          }
+        }
+
+        // Update corresponding reservoirs
+        for (let i = 0; i < numVisualRows; i++) {
+          for (let j = 0; j < GRID_COLS; j++) {
+            if (visualReceptors[i][j] === 1) {
+              visualReservoirs[i * GRID_COLS + j].updateValue(
+                visualContribution
+              );
+            }
+          }
+        }
+      }
+
+      function moveCreature() {
+        // Calculate net effect from movement reservoirs
+        const leftValue = movementReservoirs
+          .slice(0, numLeftMovementReservoirs)
+          .reduce((sum, res) => sum + res.value, 0);
+        const rightValue = movementReservoirs
+          .slice(numLeftMovementReservoirs)
+          .reduce((sum, res) => sum + res.value, 0);
+
+        if (leftValue > rightValue && creaturePosition > 0) {
+          creaturePosition--;
+        } else if (rightValue > leftValue && creaturePosition < GRID_COLS - 1) {
+          creaturePosition++;
+        }
+
+        // Check for collision
+        for (let brick of fallingBricks) {
+          if (brick.y === GRID_ROWS - 1 && brick.x === creaturePosition) {
+            // Collision occurred
+            batons.forEach((baton) => {
+              if (baton.active) baton.punish();
+            });
+            score = 0; // Reset score
+            return false;
+          }
+        }
+
+        // Successful move, reinforce active batons
+        batons.forEach((baton) => {
+          if (baton.active) baton.reinforce();
+        });
+
+        return true;
+      }
+
+      function drawGame() {
+        gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+        // Draw grid
+        gameCtx.strokeStyle = "black";
+        for (let i = 0; i <= GRID_COLS; i++) {
+          gameCtx.beginPath();
+          gameCtx.moveTo(i * CELL_SIZE, 0);
+          gameCtx.lineTo(i * CELL_SIZE, gameCanvas.height);
+          gameCtx.stroke();
+        }
+        for (let i = 0; i <= GRID_ROWS; i++) {
+          gameCtx.beginPath();
+          gameCtx.moveTo(0, i * CELL_SIZE);
+          gameCtx.lineTo(gameCanvas.width, i * CELL_SIZE);
+          gameCtx.stroke();
+        }
+
+        // Draw visual receptors
+        for (let i = 0; i < numVisualRows; i++) {
+          for (let j = 0; j < GRID_COLS; j++) {
+            if (visualReceptors[i][j] === 1) {
+              gameCtx.fillStyle = "orange";
+            } else {
+              gameCtx.fillStyle = "yellow";
+            }
+            gameCtx.fillRect(
+              j * CELL_SIZE,
+              (GRID_ROWS - numVisualRows - 1 + i) * CELL_SIZE,
+              CELL_SIZE,
+              CELL_SIZE
+            );
+          }
+        }
+
+        // Draw falling bricks
+        for (let brick of fallingBricks) {
+          gameCtx.fillStyle = brick.color;
+          gameCtx.fillRect(
+            brick.x * CELL_SIZE,
+            brick.y * CELL_SIZE,
+            CELL_SIZE,
+            CELL_SIZE
+          );
+        }
+
+        // Draw creature
+        gameCtx.fillStyle = "blue";
+        gameCtx.fillRect(
+          creaturePosition * CELL_SIZE,
+          (GRID_ROWS - 1) * CELL_SIZE,
+          CELL_SIZE,
+          CELL_SIZE
+        );
+      }
+
+      function showBatonInfo(event) {
+        const rect = neuralCanvas.getBoundingClientRect();
+        const mousePos = {
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top,
+        };
+        const clickedBatons = [];
+
+        // Find all batons whose info dot is near the clicked position
+        batons.forEach((baton) => {
+          if (
+            Math.abs(mousePos.x - baton.dotPos.x) <= 5 &&
+            Math.abs(mousePos.y - baton.dotPos.y) <= 5
+          ) {
+            clickedBatons.push(baton);
+          }
+        });
+
+        if (clickedBatons.length > 0) {
+          batonInfo.style.display = "block";
+          batonInfo.style.left = `${event.pageX + 10}px`;
+          batonInfo.style.top = `${event.pageY + 10}px`;
+
+          let infoHTML = "";
+          clickedBatons.forEach((baton, index) => {
+            infoHTML += `<p><strong>Baton ${index + 1}</strong></p>`;
+            infoHTML += `<p><strong>ID:</strong> ${baton.id}</p>`;
+            infoHTML += `<p><strong>Type:</strong> ${baton.batonType}</p>`;
+            infoHTML += `<p><strong>Threshold:</strong> ${baton.threshold}</p>`;
+            infoHTML += `<p><strong>Hit Points:</strong> ${baton.hitPoints}</p>`;
+            infoHTML += `<p><strong>Active:</strong> ${baton.active}</p>`;
+            infoHTML += `<hr>`;
+          });
+
+          batonInfo.innerHTML = infoHTML;
+        } else {
+          batonInfo.style.display = "none";
+        }
+      }
+
+      const safeGetConfigValue = (id, messages) => {
+        const elem = document.getElementById(id);
+        if (!elem) {
+          messages.push(`No such config var: ${id}`);
+          return null;
+        }
+        const value = elem.value.trim();
+        if (!value) {
+          messages.push(
+            `Config var "${id}" is required. You provided a blank value.`
+          );
+          return null;
+        }
+        const numberValue = Number(value);
+        if (isNaN(numberValue)) {
+          messages.push(`Invalid input for config var "${id}": ${value}`);
+          return null;
+        }
+        return numberValue;
+      };
+
+      function startSimulation() {
+        const configReadingErrors = [];
+
+        numReservoirs = safeGetConfigValue(
+          "numReservoirs",
+          configReadingErrors
+        );
+        numPosBatons = safeGetConfigValue("numPosBatons", configReadingErrors);
+        numNegBatons = safeGetConfigValue("numNegBatons", configReadingErrors);
+        numPacemakerBatons = safeGetConfigValue(
+          "numPacemakerBatons",
+          configReadingErrors
+        );
+        fadeRate = safeGetConfigValue(
+          "fadeRate",
+          configReadingErrors
+        );
+        batonSurvivalStrength = safeGetConfigValue(
+          "batonSurvivalStrength",
+          configReadingErrors
+        );
+        batonHighCutoff = safeGetConfigValue(
+          "batonHighCutoff",
+          configReadingErrors
+        );
+        visualContribution = safeGetConfigValue(
+          "visualContribution",
+          configReadingErrors
+        );
+        rewardValue = safeGetConfigValue("rewardValue", configReadingErrors);
+        punishmentValue = safeGetConfigValue(
+          "punishmentValue",
+          configReadingErrors
+        );
+        GRID_COLS = safeGetConfigValue("gridCols", configReadingErrors);
+        GRID_ROWS = safeGetConfigValue("gridRows", configReadingErrors);
+        maxNumSimultaneousBricks = safeGetConfigValue(
+          "maxNumSimultaneousBricks",
+          configReadingErrors
+        );
+        numVisualRows = safeGetConfigValue(
+          "numVisualRows",
+          configReadingErrors
+        );
+        numLeftMovementReservoirs = safeGetConfigValue(
+          "numLeftMovementReservoirs",
+          configReadingErrors
+        );
+        numRightMovementReservoirs = safeGetConfigValue(
+          "numRightMovementReservoirs",
+          configReadingErrors
+        );
+
+        if (configReadingErrors.length > 0) {
+          alert(
+            `
+Cannot start simulation due to bad configuration values:
+${configReadingErrors.join("\n")}
+                `.trim()
+          );
+          return;
+        }
+
+        score = 0
+        bestScore = 0
+
+        const totalSpecialReservoirs =
+          numVisualRows * GRID_COLS +
+          numLeftMovementReservoirs +
+          numRightMovementReservoirs;
+        if (numReservoirs < totalSpecialReservoirs) {
+          alert(
+            "Error: Number of reservoirs is less than the required number of special reservoirs (visual and movement)."
+          );
+          return;
+        }
+
+        // Adjust canvas size and cell size
+        CELL_SIZE = Math.floor(
+          Math.min(gameCanvas.width / GRID_COLS, gameCanvas.height / GRID_ROWS)
+        );
+        gameCanvas.width = GRID_COLS * CELL_SIZE;
+        gameCanvas.height = GRID_ROWS * CELL_SIZE;
+
+        creaturePosition = Math.floor(GRID_COLS / 2);
+
+        const positions = arrangePositions(
+          numReservoirs,
+          neuralCanvas.width,
+          neuralCanvas.height
+        );
+        reservoirs = [];
+        for (let i = 0; i < numReservoirs; i++) {
+          reservoirs.push(
+            new Reservoir(`Reservoir${i + 1}`, positions[`reservoir${i + 1}`])
+          );
+        }
+
+        // Assign visual and movement reservoirs
+        assignVisualAndMovementReservoirs();
+
+        // Initialize batons
+        batons = [];
+        let batonId = 1;
+        for (let i = 0; i < numPosBatons; i++) {
+          batons.push(new Baton( "positive", batonId++));
+        }
+        for (let i = 0; i < numNegBatons; i++) {
+          batons.push(new Baton( "negative", batonId++));
+        }
+        for (let i = 0; i < numPacemakerBatons; i++) {
+          batons.push(new Baton( "pacemaker", batonId++));
+        }
+
+        // Connect batons randomly
+        batons.forEach((baton) => {
+          const startReservoir =
+            reservoirs[Math.floor(Math.random() * reservoirs.length)];
+          const validEndReservoirs = reservoirs.filter(
+            (res) => res !== startReservoir && !visualReservoirs.includes(res)
+          );
+          if (validEndReservoirs.length > 0) {
+            const endReservoir =
+              validEndReservoirs[
+                Math.floor(Math.random() * validEndReservoirs.length)
+              ];
+            baton.connect(startReservoir, endReservoir);
+          }
+        });
+
+        initializeFallingBricks();
+        simulate();
+      }
+
+      function arrangePositions(numReservoirs, width, height) {
+        const positions = {};
+        const rows = Math.floor(Math.sqrt(numReservoirs));
+        const cols = Math.ceil(numReservoirs / rows);
+        const margin = 50;
+        const rowHeight = (height - 2 * margin) / rows;
+        const colWidth = (width - 2 * margin) / cols;
+
+        for (let i = 0; i < numReservoirs; i++) {
+          const row = Math.floor(i / cols);
+          const col = i % cols;
+          const x = margin + col * colWidth + colWidth / 2;
+          const y = margin + row * rowHeight + rowHeight / 2;
+          positions[`reservoir${i + 1}`] = { x, y };
+        }
+        return positions;
+      }
+
+      function assignVisualAndMovementReservoirs() {
+        // Assign visual reservoirs
+        const numVisualReservoirs = numVisualRows * GRID_COLS;
+        visualReservoirs = reservoirs.slice(0, numVisualReservoirs);
+        for (let i = 0; i < visualReservoirs.length; i++) {
+          visualReservoirs[i].name = `V${i + 1}`;
+        }
+
+        // Assign movement reservoirs
+        const totalMovementReservoirs =
+          numLeftMovementReservoirs + numRightMovementReservoirs;
+        movementReservoirs = reservoirs.slice(
+          numVisualReservoirs,
+          numVisualReservoirs + totalMovementReservoirs
+        );
+
+        for (let i = 0; i < numLeftMovementReservoirs; i++) {
+          movementReservoirs[i].name = `Left${i + 1}`;
+        }
+        for (let i = 0; i < numRightMovementReservoirs; i++) {
+          movementReservoirs[numLeftMovementReservoirs + i].name = `Right${
+            i + 1
+          }`;
+        }
+      }
+
+      function simulate() {
+        neuralCtx.clearRect(0, 0, neuralCanvas.width, neuralCanvas.height);
+
+        reservoirs.forEach((reservoir) => {
+          let label = "";
+          let color = BLACK;
+          if (visualReservoirs.includes(reservoir)) {
+            color = RED;
+          } else if (movementReservoirs.includes(reservoir)) {
+            color = BLUE;
+          }
+          reservoir.fade();
+          reservoir.draw(label, color);
+        });
+
+        batons.forEach((baton) => baton.transmitSignal());
+        batons.forEach((baton) => {
+          if (baton.hitPoints <= 0) {
+            baton.relocate();
+          }
+        });
+
+        batons.forEach((baton) => baton.draw());
+
+        // Game logic
+        updateFallingBricks();
+        updateVisualReceptors();
+        if (moveCreature()) {
+          drawGame();
+          updateStats();
+          requestAnimationFrame(simulate);
+        } else {
+          console.log("Game Over! Final Score: " + score);
+          initializeFallingBricks();
+          creaturePosition = Math.floor(GRID_COLS / 2);
+          score = 0;
+          simulate();
+        }
+      }
+
+      function updateStats() {
+        statsDiv.innerHTML = `
+                <h3>Game Stats</h3>
+                <p>Score: ${score}</p>
+                <p>Best Score:${bestScore}</p>
+            `;
+      }
+
+      neuralCanvas.addEventListener("mousedown", showBatonInfo);
+    </script>
+  </body>
+</html>
