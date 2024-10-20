@@ -44,17 +44,25 @@
       <label for="numReservoirs">Number of reservoirs:</label>
       <input type="number" id="numReservoirs" value="50" />
       <label for="numPosBatons">Number of positive batons:</label>
-      <input type="number" id="numPosBatons" value="180" />
+      <input type="number" id="numPosBatons" value="40" />
       <label for="numNegBatons">Number of negative batons:</label>
-      <input type="number" id="numNegBatons" value="20" />
+      <input type="number" id="numNegBatons" value="10" />
       <label for="numPacemakerBatons">Number of pacemaker batons:</label>
-      <input type="number" id="numPacemakerBatons" value="4" />
+      <input type="number" id="numPacemakerBatons" value="5" />
+      <label for="pacemakerFireInterval">Pacemaker fire interval:</label>
+      <input type="number" id="pacemakerFireInterval" value="15" />
       <label for="fadeRate">Fade Rate:</label>
-      <input type="number" id="fadeRate" value="0.25" />
+      <input type="number" id="fadeRate" value="0.125" />
       <label for="batonSurvivalStrength">Baton Survival Strength:</label>
-      <input type="number" id="batonSurvivalStrength" value="0.125" />
-      <label for="batonHighCutoff">Baton High Cutoff:</label>
-      <input type="number" id="batonHighCutoff" value="0.4" />
+      <input type="number" id="batonSurvivalStrength" value="0.80" />
+
+      <label for="batonStartingHitPoints">Baton Starting Hit Points:</label>
+      <input type="number" id="batonStartingHitPoints" value="30" />
+      <label for="batonSpawnRate">Baton Spawn Rate:</label>
+      <input type="number" id="batonSpawnRate" value="0.010" />
+
+      <!-- <label for="batonHighCutoff">Baton High Cutoff:</label>
+      <input type="number" id="batonHighCutoff" value="0.4" /> -->
       <label for="visualContribution">Visual Receptor Stimulation:</label>
       <input type="number" id="visualContribution" value="1.0" />
       <br /><br />
@@ -94,9 +102,88 @@
     <div id="batonInfo" class="floating-window"></div>
 
     <script>
+      const COLOR_RESCALE_CUTOFF = 1e-6;
 
-      function sigmoid(x){
-        return 1 / (1 + Math.exp(-x))
+      /**
+       * Takes in an array of values and assigns RGB colors on a color scale dictated by the start and end color.
+       * The values are scaled to the range of values found in the input array.
+       * If the range of values is smaller than COLOR_RESCALE_CUTOFF, then all values get the null color.
+       * The function outputs CSS rgb color strings.
+       *
+       * @param {Array<number>} values - The input values to be mapped to colors.
+       * @param {Array<number>} startColor - The RGB array of the start color (default is red [255,0,0]).
+       * @param {Array<number>} endColor - The RGB array of the end color (default is blue [0,0,255]).
+       * @param {Array<number>} nullColor - The RGB array for the null color (default is black [0,0,0]).
+       * @returns {Array<string>} - An array of CSS rgb color strings representing the colors for each value.
+       */
+      function assignColorSpectrum(
+        values,
+        startColor = [255, 0, 0],
+        endColor = [0, 255, 0],
+        nullColor = [128, 128, 128]
+      ) {
+        // Handle edge case: no values
+        if (values.length === 0) {
+          return [];
+        }
+
+        // Handle edge case: only one value
+        if (values.length === 1) {
+          return [`rgb(${nullColor[0]}, ${nullColor[1]}, ${nullColor[2]})`];
+        }
+
+        let minValue = values[0];
+        let maxValue = values[0];
+
+        // Find the min and max values manually
+        for (let i = 1; i < values.length; i++) {
+          if (values[i] < minValue) {
+            minValue = values[i];
+          } else if (values[i] > maxValue) {
+            maxValue = values[i];
+          }
+        }
+
+        const range = maxValue - minValue;
+
+        // If the range is too small, return the null color for all values
+        if (range < COLOR_RESCALE_CUTOFF) {
+          let result = [];
+          for (let i = 0; i < values.length; i++) {
+            result.push(
+              `rgb(${nullColor[0]}, ${nullColor[1]}, ${nullColor[2]})`
+            );
+          }
+          return result;
+        }
+
+        // Helper function to linearly interpolate between two colors and return as CSS rgb string
+        function interpolateColor(ratio, startColor, endColor) {
+          let r = Math.round(
+            startColor[0] + ratio * (endColor[0] - startColor[0])
+          );
+          let g = Math.round(
+            startColor[1] + ratio * (endColor[1] - startColor[1])
+          );
+          let b = Math.round(
+            startColor[2] + ratio * (endColor[2] - startColor[2])
+          );
+          return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        // Assign a color for each value based on its scaled position in the range
+        let result = [];
+        for (let i = 0; i < values.length; i++) {
+          const scaledValue = (values[i] - minValue) / range;
+          const color = interpolateColor(scaledValue, startColor, endColor);
+          result.push(color);
+        }
+
+        return result;
+      }
+
+      function sigmoid(x) {
+        return 1 / (1 + Math.exp(-x));
       }
 
       // Canvas setup
@@ -133,7 +220,9 @@
       let numPosBatons;
       let numNegBatons;
       let numPacemakerBatons;
+      let pacemakerFireInterval;
       let batonSurvivalStrength;
+      let batonStartingHitPoints;
       let visualContribution;
       let rewardValue;
       let punishmentValue;
@@ -144,16 +233,53 @@
       let numLeftMovementReservoirs;
       let numRightMovementReservoirs;
       let fadeRate;
-      let highBatonCutoff;
+      // let highBatonCutoff;
+      let batonSpawnRate;
 
+      let reservoirColors = undefined; //precomputed and cached resevoir colors
+      let batonColors = undefined; //precomputed ad caached baton colors
+
+      function resetColorCache() {
+        reservoirColors = undefined;
+        batonColors = undefined;
+      }
+
+      function safeGetReservoirColor(index) {
+        if (reservoirColors === undefined) {
+          return "rgb(128,128,128)";
+        }
+        return reservoirColors[index];
+      }
+
+      function safeGetBatonColor(index) {
+        if (batonColors === undefined) {
+          return "rgb(128,128,128)";
+        }
+        return batonColors[index];
+      }
+
+      function computeColorCache() {
+        const reservoirValues = reservoirs.map((r) => {
+          return r.value;
+        });
+
+        reservoirColors = assignColorSpectrum(reservoirValues);
+
+        const batonStrengths = batons.map((b) => {
+          return b.strength;
+        });
+
+        batonColors = assignColorSpectrum(batonStrengths);
+      }
 
       class Reservoir {
-        constructor(name, pos) {
+        constructor(name, pos, index) {
           this.name = name;
           this.pos = pos;
           this.value = 0;
           this.inputs = [];
           this.outputs = [];
+          this.index = index;
         }
 
         addInput(baton) {
@@ -165,39 +291,27 @@
         }
 
         updateValue(signal) {
-          this.value += signal
+          this.value = signal;
         }
 
         fade() {
-          this.value = sigmoid(this.value-fadeRate)
+            this.value = Math.max(0,this.value - fadeRate);
         }
 
         draw(label, color = BLACK) {
-          let fillColor;
-          switch (this.value) {
-            case 0:
-              fillColor = GRAY;
-              break;
-            case 1:
-              fillColor = YELLOW;
-              break;
-            case 2:
-              fillColor = GREEN;
-              break;
-            case 3:
-              fillColor = BLUE;
-              break;
-            case 4:
-            default:
-              fillColor = RED;
-              break;
+          let fillColor = safeGetReservoirColor(this.index);
+
+          if(this.index < GRID_COLS * numVisualRows){
+            const gray = 255 * this.value
+            fillColor = `rgb(${gray},${gray},${gray})`
           }
+
           neuralCtx.beginPath();
           neuralCtx.arc(this.pos.x, this.pos.y, 40, 0, Math.PI * 2);
           neuralCtx.fillStyle = fillColor;
           neuralCtx.fill();
           neuralCtx.lineWidth = 2;
-          neuralCtx.strokeStyle = BLACK;
+          neuralCtx.strokeStyle = color;
           neuralCtx.stroke();
           neuralCtx.closePath();
 
@@ -218,16 +332,16 @@
 
       class Baton {
         constructor(batonType = "positive", id) {
+          this.batonType = batonType;
           this.id = id;
-          this.isPacemaker = batonType === "pacemaker"
-          this.strength = (batonType==="pacemaker")?(1):(
-            batonType==="positive" ? 1 : -1
-          )
-          this.hitPoints = 10;
+          this.isPacemaker = batonType === "pacemaker";
+          this.strength =
+            batonType === "pacemaker" ? 1 : batonType === "positive" ? 1 : -1;
+          this.hitPoints = batonStartingHitPoints;
           this.stepsSinceLastSignal = 0;
           this.startReservoir = null;
           this.endReservoir = null;
-          this.active = false;
+          this.active = batonType === "pacemaker";
           this.dotPos = { x: 0, y: 0 }; // Position for the info dot
         }
 
@@ -249,37 +363,69 @@
         }
 
         transmitSignal() {
-
-
-          if (
-              this.active || (this.isPacemaker && this.stepsSinceLastSignal %3 === 0)
-          ) {
-            const signal = this.strength*sigmoid(this.startReservoir.value*this.strength)
-            this.endReservoir.updateValue(signal);
-            this.stepsSinceLastSignal = 0;
-
-            return signal;
-          } 
-
-          this.stepsSinceLastSignal++;
-
+          if (this.active) {
+            if (this.isPacemaker) {
+              if (this.stepsSinceLastSignal % pacemakerFireInterval === 0) {
+                const signal =
+                    sigmoid(this.startReservoir.value * this.strength);
+                this.endReservoir.value  = this.endReservoir.value+signal
+                this.stepsSinceLastSignal = 0;
+              } else {
+                this.stepsSinceLastSignal++;
+              }
+            } else {
+              const signal =
+                    sigmoid(this.startReservoir.value * this.strength);
+                this.endReservoir.value  = this.endReservoir.value+signal
+              return signal;
+            }
+          } else {
+            if (Math.random() < batonSpawnRate) {
+              this.respawn();
+              this.relocate();
+              this.active = true;
+              this.stepsSinceLastSignal = 0;
+            }
+            return 0;
+          }
         }
 
-        reinforce() {
-          // todo
+        /**
+         * reinforces a baton ie increases its strength dependent on its existing strength and the
+         * values of the starting and end resevoir.
+         *
+         * @param {number} -
+         * If multiplier is 1 (default)
+         * then it is a reinforcment
+         * If multiplier is -1 then it is a punishment
+         * this is because in our design the punishmet of a baton is the exact inverse of reinforcement
+         *
+         * @remarks
+         *
+         */
+        reinforce(multiplier = 1, amount = rewardValue) {
+          if (!this.startReservoir || !this.endReservoir) {
+            return;
+          }
+          const reinforcementValue = multiplier * amount;
+          this.strength = this.strength * (1.0 + reinforcementValue);
         }
 
         punish() {
-           // todo
+          this.reinforce(-1, punishmentValue);
         }
 
         relocate() {
-          const highReservoirs = reservoirs.filter(
-            (res) => Math.abs(res.value) > highBatonCutoff  && !visualReservoirs.includes(res)
-          );
-          const lowReservoirs = reservoirs.filter(
-            (res) => Math.abs(res.value) < highBatonCutoff && !visualReservoirs.includes(res)
-          );
+          // const highReservoirs = reservoirs.filter(
+          //   (res) =>
+          //     Math.abs(res.value) > highBatonCutoff &&
+          //     !visualReservoirs.includes(res)
+          // );
+          // const lowReservoirs = reservoirs.filter(
+          //   (res) =>
+          //     Math.abs(res.value) < highBatonCutoff &&
+          //     !visualReservoirs.includes(res)
+          // );
 
           const reservoirIsConnected = (reservoirObject) => {
             for (let baton of batons) {
@@ -314,45 +460,54 @@
             const newStart = rvr;
             this.connect(newStart, this.endReservoir);
           } else {
-            if (highReservoirs.length && lowReservoirs.length) {
-              const newStart =
-                highReservoirs[
-                  Math.floor(Math.random() * highReservoirs.length)
-                ];
-              const newEnd =
-                lowReservoirs[Math.floor(Math.random() * lowReservoirs.length)];
-              this.connect(newStart, newEnd);
-            } else {
-              const validReservoirs = reservoirs.filter(
-                (res) => !visualReservoirs.includes(res)
-              );
-              const newStart =
-                validReservoirs[
-                  Math.floor(Math.random() * validReservoirs.length)
-                ];
-              const newEnd = validReservoirs.filter((r) => r !== newStart)[
-                Math.floor(Math.random() * (validReservoirs.length - 1))
+            // if (highReservoirs.length && lowReservoirs.length) {
+            //   const newStart =
+            //     highReservoirs[
+            //       Math.floor(Math.random() * highReservoirs.length)
+            //     ];
+            //   const newEnd =
+            //     lowReservoirs[Math.floor(Math.random() * lowReservoirs.length)];
+            //   this.connect(newStart, newEnd);
+            // } else {
+            const validReservoirs = reservoirs.filter(
+              (res) => !visualReservoirs.includes(res)
+            );
+            const newStart =
+              validReservoirs[
+                Math.floor(Math.random() * validReservoirs.length)
               ];
-              this.connect(newStart, newEnd);
-            }
+            const newEnd = validReservoirs.filter((r) => r !== newStart)[
+              Math.floor(Math.random() * (validReservoirs.length - 1))
+            ];
+            this.connect(newStart, newEnd);
+            // }
           }
 
           this.respawn();
         }
 
         respawn() {
-          this.hitPoints = 10;
+          this.strength =
+            this.batonType === "pacemaker"
+              ? 1
+              : this.batonType === "positive"
+              ? 1
+              : -1;
+          this.hitPoints = batonStartingHitPoints;
         }
 
         draw() {
+          if (!this.active) {
+            return;
+          }
           let color;
           if (this.batonType === "pacemaker") {
             color = BLUE;
           } else {
-            color = "black";
+            color = safeGetBatonColor(this.id - 1);
           }
 
-          const thickness = this.active ? 6 : this.hitPoints <= 10 ? 2 : 4;
+          const thickness = 2;
 
           neuralCtx.beginPath();
           neuralCtx.moveTo(
@@ -387,11 +542,11 @@
           neuralCtx.fill();
 
           // Draw info dot
-          neuralCtx.beginPath();
-          neuralCtx.arc(this.dotPos.x, this.dotPos.y, 5, 0, Math.PI * 2);
-          neuralCtx.fillStyle = color;
-          neuralCtx.fill();
-          neuralCtx.closePath();
+          // neuralCtx.beginPath();
+          // neuralCtx.arc(this.dotPos.x, this.dotPos.y, 5, 0, Math.PI * 2);
+          // neuralCtx.fillStyle = color;
+          // neuralCtx.fill();
+          // neuralCtx.closePath();
         }
       }
 
@@ -438,11 +593,13 @@
         for (let i = 0; i < numVisualRows; i++) {
           for (let j = 0; j < GRID_COLS; j++) {
             if (visualReceptors[i][j] === 1) {
-              visualReservoirs[i * GRID_COLS + j].updateValue(
-                visualContribution
-              );
+              visualReservoirs[i * GRID_COLS + j].value = sigmoid(visualReservoirs[i * GRID_COLS + j].value +visualContribution)
             }
           }
+        }
+
+        for (const reservoir of visualReservoirs) {
+          reservoir.fade();
         }
       }
 
@@ -611,18 +768,22 @@
           "numPacemakerBatons",
           configReadingErrors
         );
-        fadeRate = safeGetConfigValue(
-          "fadeRate",
-          configReadingErrors
-        );
+        pacemakerFireInterval = safeGetConfigValue("pacemakerFireInterval",configReadingErrors)
+        fadeRate = safeGetConfigValue("fadeRate", configReadingErrors);
         batonSurvivalStrength = safeGetConfigValue(
           "batonSurvivalStrength",
           configReadingErrors
         );
-        batonHighCutoff = safeGetConfigValue(
-          "batonHighCutoff",
+
+        batonStartingHitPoints = safeGetConfigValue(
+          "batonStartingHitPoints",
           configReadingErrors
         );
+
+        // batonHighCutoff = safeGetConfigValue(
+        //   "batonHighCutoff",
+        //   configReadingErrors
+        // );
         visualContribution = safeGetConfigValue(
           "visualContribution",
           configReadingErrors
@@ -650,6 +811,10 @@
           "numRightMovementReservoirs",
           configReadingErrors
         );
+        batonSpawnRate = safeGetConfigValue(
+          "batonSpawnRate",
+          configReadingErrors
+        );
 
         if (configReadingErrors.length > 0) {
           alert(
@@ -661,8 +826,8 @@ ${configReadingErrors.join("\n")}
           return;
         }
 
-        score = 0
-        bestScore = 0
+        score = 0;
+        bestScore = 0;
 
         const totalSpecialReservoirs =
           numVisualRows * GRID_COLS +
@@ -692,7 +857,11 @@ ${configReadingErrors.join("\n")}
         reservoirs = [];
         for (let i = 0; i < numReservoirs; i++) {
           reservoirs.push(
-            new Reservoir(`Reservoir${i + 1}`, positions[`reservoir${i + 1}`])
+            new Reservoir(
+              `Reservoir${i + 1}`,
+              positions[`reservoir${i + 1}`],
+              i
+            )
           );
         }
 
@@ -703,13 +872,13 @@ ${configReadingErrors.join("\n")}
         batons = [];
         let batonId = 1;
         for (let i = 0; i < numPosBatons; i++) {
-          batons.push(new Baton( "positive", batonId++));
+          batons.push(new Baton("positive", batonId++));
         }
         for (let i = 0; i < numNegBatons; i++) {
-          batons.push(new Baton( "negative", batonId++));
+          batons.push(new Baton("negative", batonId++));
         }
         for (let i = 0; i < numPacemakerBatons; i++) {
-          batons.push(new Baton( "pacemaker", batonId++));
+          batons.push(new Baton("pacemaker", batonId++));
         }
 
         // Connect batons randomly
@@ -777,24 +946,35 @@ ${configReadingErrors.join("\n")}
       }
 
       function simulate() {
+        computeColorCache();
+
         neuralCtx.clearRect(0, 0, neuralCanvas.width, neuralCanvas.height);
 
         reservoirs.forEach((reservoir) => {
           let label = "";
           let color = BLACK;
           if (visualReservoirs.includes(reservoir)) {
-            color = RED;
+            color = "orange";
           } else if (movementReservoirs.includes(reservoir)) {
-            color = BLUE;
+            color = "purple";
           }
-          reservoir.fade();
           reservoir.draw(label, color);
         });
-
+        // todo: order here should be radomized
+        batons.forEach((baton) => {
+          if (baton.active) {
+            if (Math.abs(baton.strength) < batonSurvivalStrength) {
+              baton.hitPoints--;
+            }
+          }
+        });
         batons.forEach((baton) => baton.transmitSignal());
         batons.forEach((baton) => {
-          if (baton.hitPoints <= 0) {
-            baton.relocate();
+          if (baton.active) {
+            if (baton.hitPoints <= 0) {
+              baton.hitPoints = 0;
+              baton.active = false;
+            }
           }
         });
 
@@ -808,7 +988,6 @@ ${configReadingErrors.join("\n")}
           updateStats();
           requestAnimationFrame(simulate);
         } else {
-          console.log("Game Over! Final Score: " + score);
           initializeFallingBricks();
           creaturePosition = Math.floor(GRID_COLS / 2);
           score = 0;
