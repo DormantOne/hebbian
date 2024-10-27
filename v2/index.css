@@ -1,0 +1,81 @@
+/* CSS Reset */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Body Styling */
+body {
+    width: 100vw;
+    height: 100vh;
+    overflow: auto;
+    font-family: Arial, sans-serif;
+}
+
+.MainContainer {
+    width:100%;
+    height:100%;
+    display:flex;
+    flex-direction:row;
+
+}
+
+.Panel {
+    flex:1;
+    height:100vh;
+    position:relative;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    gap:0.5rem;
+}
+
+.Panel1 {
+    border-right:2px solid black;
+
+}
+.Panel2 {}
+.Panel3 {
+    border-left:2px solid black; 
+}
+
+.PanelTitle {
+    background-color:black;
+    color:white;
+    font-size:2rem;
+    padding:0.5rem;
+    position:sticky;
+    width:100%;
+    top:0;
+    left:0;
+}
+
+.ParameterControl {
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:flex-start;
+    padding:0.25rem;
+    gap:0.25rem;
+    width:100%;
+}
+
+.ParameterControl label {
+    font-size:1.25rem;
+    display:block;
+    width:100%;
+    word-wrap:break-word;
+}
+
+.ParameterControl input {
+    font-size:1.25rem;
+    display:block;
+    border:1px solid black;
+    background-color: rgb(150,200,150);
+    width:100%;
+}
