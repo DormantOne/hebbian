@@ -18,43 +18,68 @@ body {
 .MainContainer {
     width:100%;
     height:100%;
-    display:flex;
-    flex-direction:row;
-
+    display:grid;
+    background-color: black;
+    grid-template-rows: auto 1fr auto 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
 }
 
 .Panel {
-    flex:1;
-    height:100vh;
+    background-color: white;
+    width: 100%;
     position:relative;
     overflow-y:auto;
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:flex-start;
-    gap:0.5rem;
 }
 
 .Panel1 {
-    border-right:2px solid black;
+    overflow: visible;    
+}
+
+.Panel2 {}
+
+.Panel3 {
 
 }
-.Panel2 {}
-.Panel3 {
-    border-left:2px solid black; 
+
+.Panel4 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.ControlPanelContainer {
+    max-width: 100%;
+    max-height: calc(50vh - 3rem);
+    overflow: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.Panel5 {
+    
+}
+
+.Panel6 {
+    
 }
 
 .PanelTitle {
-    background-color:black;
-    color:white;
+    background-color:skyblue;
+    color:black;
     font-size:2rem;
-    padding:0.5rem;
-    position:sticky;
     width:100%;
-    top:0;
-    left:0;
-    z-index:1;
     height: 3rem;
+    line-height: 3rem;
+    text-align:center
 }
 
 .ParameterControl {
@@ -84,11 +109,14 @@ body {
 
 .TabView {
 width:100%;
+height: 100%;
 position:relative;
-display: flex;
-flex-direction: column;
-flex-grow: 1;
-max-height: calc(100vh - 3rem - 0.5rem);
+display: grid;
+grid-template-columns: 1fr;
+grid-template-rows: auto 1fr;
+background-color: rgb(248, 219, 134);
+overflow: visible;
+row-gap: 8px;
 }
 
 .tab-content {
@@ -97,36 +125,95 @@ position:relative;
 }
 
 .tab-title-container{
+    background-color: black;
     width:100%;
     position:relative;
     display:flex;
     flex-direction:row;
     align-items:stretch;
     justify-content:flex-start;
-    gap: 2px;
-    padding-left: 2px;
-    padding-right: 2px;
-    flex: 0;
+    overflow: visible;
     height: 2rem;
+    background-color: rgb(248, 219, 134);
 }
 
 .tab-content-container {
     width: 100%;
-    overflow-y:auto;
-    flex-grow: 1;
-    max-height: calc(100vh - 3rem - 2rem - 0.5rem);
+    max-height: calc(50vh - 2rem - 3rem - 8px);
+    overflow-y: auto;
 }
 
-.tab-title-container .tab {
-    background-color:darkgreen;
-    color:white;
+.tab {
+    background-color:white;
+    color:black;
     font-size:1.25rem;
-    padding:0.25rem;
+    line-height: 2rem;
+    margin: 0;
     flex:1;
     text-align:center;
+    cursor: pointer;
+    user-select: none;
+    width: 100%;
+    text-align: center;
+    height: 100%;
+    transition: all 0.2s ease-in-out;
+    transform-origin: center;
+    transform: scale(1);
+}
+
+.tab.tab-active {
+    background-color:  rgb(218, 186, 90);
+    cursor: auto;
+    margin-top: -4px;
+    z-index: 1;
+    box-shadow: 0px 0px 4px 2px rgba(0,0,0,0.5);
+}
+
+.tab:not(.tab-active) {
+    background-color:  lightgray;
+    cursor: pointer;
+    margin-top: 0px;
+    z-index: 0;
+}
+
+.tab:not(.tab-active):hover {
+    z-index: 2;
+    margin-top: -4px;
+    box-shadow: 0px 0px 4px 2px rgba(0,0,0,0.5);
+}
+.tab:not(.tab-active):active {
+    z-index: 2;
+    transform: scale(0.9);
+    margin-top: -4px;
+    box-shadow: 0px 0px 2px 2px rgba(0,0,0,0.5);
 
 }
 
-.tab-title-container .active {
-    background-color:purple;
+.ControlPanelButton {
+    font-size: 1.25em;
+    line-height: 2em;
+    height: 2em;
+    padding-left: 0.25em;
+    padding-right: 0.25em;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    transform-origin: center;
+    transform: scale(1);
+    user-select: none;
 }
+
+.ControlPanelButton:hover {
+    transform: scale(1.05);
+}
+
+.ControlPanelButton:active {
+    transform: scale(0.95);
+}
+
+
+
+
+
+
+

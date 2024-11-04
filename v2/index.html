@@ -13,19 +13,23 @@
   </head>
   <body>
     <div class="MainContainer">
+      <h1 class="PanelTitle">Parameters</h1>
+      <h1 class="PanelTitle">Visualization</h1>
+      <h1 class="PanelTitle">Game</h1>
+
       <div class="Panel Panel1">
-        <h1 class="PanelTitle">Parameters</h1>
         <div class="TabView" id="parameterTabContainer">
           <div class="tab-title-container">
             <!-- Tab Titles -->
-            <div class="tab" id="gameTab">Game</div>
+            <div class="tab tab-active" id="gameTab">Game</div>
             <div class="tab" id="networkTab">Network</div>
             <div class="tab" id="learningTab">Learning</div>
+
           </div>
 
           <div class="tab-content-container">
             <!-- Tab Content: Game Parameters -->
-            <div class="tab-content" id="gameParameters">
+            <div class="tab-content" id="gameParameters" style="display:block;">
               <div class="ParameterControl">
                 <label for="numColumns">Number of Columns</label>
                 <input type="number" id="numColumns" value="5" />
@@ -53,7 +57,7 @@
             </div>
 
             <!-- Tab Content: Network Structure Parameters -->
-            <div class="tab-content" id="networkStructureParameters">
+            <div class="tab-content" id="networkStructureParameters" style="display:none;">
               <div class="ParameterControl">
                 <label for="maxNodes">Max Nodes</label>
                 <input type="number" id="maxNodes" value="50" />
@@ -97,7 +101,7 @@
             </div>
 
             <!-- Tab Content: Learning Parameters -->
-            <div class="tab-content" id="learningParameters">
+            <div class="tab-content" id="learningParameters" style="display:none;">
               <div class="ParameterControl">
                 <label for="spikeActivationLevel">Spike Activation Level</label>
                 <input type="number" id="spikeActivationLevel" value="1" />
@@ -182,12 +186,25 @@
         </div>
       </div>
 
-      <div class="Panel Panel2">
-        <h1 class="PanelTitle">Visualization</h1>
+      <div class="Panel Panel2"></div>
+
+      <div class="Panel Panel3"></div>
+
+      <h1 class="PanelTitle">Controls</h1>
+      <h1 class="PanelTitle">Monitor</h1>
+      <h1 class="PanelTitle">Debug</h1>
+
+      <div class="Panel Panel4">
+        <div class="ControlPanelContainer">
+          <button  type="button" class="ControlPanelButton">Start Simulation</button>
+          <button  type="button"  class="ControlPanelButton">Stop Simulation</button>
+
+        </div>
       </div>
-      <div class="Panel Panel3">
-        <h1 class="PanelTitle">Game</h1>
-      </div>
+
+      <div class="Panel Panel5"></div>
+
+      <div class="Panel Panel6"></div>
     </div>
   </body>
 </html>
