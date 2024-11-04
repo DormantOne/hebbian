@@ -6,135 +6,182 @@
     <title>Your Page Title</title>
     <!-- Link to CSS file -->
     <link rel="stylesheet" href="index.css" />
+
+    <script defer src="ui/TabView.js" type="module"></script>
+
+    <script defer src="index.js" type="module"></script>
   </head>
   <body>
     <div class="MainContainer">
       <div class="Panel Panel1">
         <h1 class="PanelTitle">Parameters</h1>
-        <div class="ParameterControl">
-          <label for="numColumns">Number of Columns</label>
-          <input type="number" id="numColumns" value="5" />
-        </div>
-        <div class="ParameterControl">
-          <label for="numRows">Number of Rows</label>
-          <input type="number" id="numRows" value="7" />
-        </div>
-        <div class="ParameterControl">
-          <label for="numVisualRows">Number of Visual Rows</label>
-          <input type="number" id="numVisualRows" value="3" />
-        </div>
-        <div class="ParameterControl">
-          <label for="numBricks">Number of Bricks</label>
-          <input type="number" id="numBricks" value="2" />
-        </div>
-        <div class="ParameterControl">
-          <label for="maxBrickFallSpeed">Max Brick Fall Speed</label>
-          <input type="number" id="maxBrickFallSpeed" value="2" />
-        </div>
-        <div class="ParameterControl">
-          <label for="maxBrickStartingOffset">Max Brick Offset</label>
-          <input type="number" id="maxBrickStartingOffset" value="1" />
-        </div>
-        <div class="ParameterControl">
-          <label for="maxNodes">Max Nodes</label>
-          <input type="number" id="maxNodes" value="50" />
-        </div>
-        <div class="ParameterControl">
-          <label for="maxEdges">Max Edges (Arrows)</label>
-          <input type="number" id="maxEdges" value="500" />
-        </div>
-        <div class="ParameterControl">
-          <label for="maxActivation">Max Activation</label>
-          <input type="number" id="maxActivation" value="10" />
-        </div>
-        <div class="ParameterControl">
-          <label for="minActivation">Min Activation</label>
-          <input type="number" id="minActivation" value="-10" />
-        </div>
-        <div class="ParameterControl">
-          <label for="maxEdgeStrength">Max Edge Strength</label>
-          <input type="number" id="maxEdgeStrength" value="5" />
-        </div>
-        <div class="ParameterControl">
-          <label for="minEdgeStrength">Min Edge Strength</label>
-          <input type="number" id="minEdgeStrength" value="-5" />
-        </div>
-        <div class="ParameterControl">
-          <label for="visualActivationLevel">Visual Activation Level</label>
-          <input type="number" id="visualActivationLevel" value="1" />
-        </div>
-        <div class="ParameterControl">
-          <label for="visualSignalDecayTimeConstant"
-            >Visual Signal Decay Time Constant (frames)</label
-          >
-          <input type="number" id="visualSignalDecayTimeConstant" value="5" />
-        </div>
-        <div class="ParameterControl">
-          <label for="spikeActivationLevel">Spike Activation Level</label>
-          <input type="number" id="spikeActivationLevel" value="1" />
-        </div>
-        <div class="ParameterControl">
-          <label for="spikeDecayTimeConstant"
-            >Spike Decay Time Constant (frames)</label
-          >
-          <input type="number" id="spikeDecayTimeConstant" value="5" />
-        </div>
-        <div class="ParameterControl">
-          <label for="reward">Reward</label>
-          <input type="number" id="reward" value="0.1" />
-        </div>
-        <div class="ParameterControl">
-          <label for="threatRewardMultiplier">Threat Reward Multiplier</label>
-          <input type="number" id="threatRewardMultiplier" value="2" />
-        </div>
-        <div class="ParameterControl">
-          <label for="punishment">Punishment</label>
-          <input type="number" id="punishment" value="15" />
-        </div>
-        <div class="ParameterControl">
-          <label for="fitnessDecayTimeConstant"
-            >Fitness Decay Time Constant (frames)</label
-          >
-          <input type="number" id="fitnssDecayTimeConstant" value="15" />
-        </div>
-        <div class="ParameterControl">
-            <label for="coincidenceWindow"
-              >Hebbian Reinforcement Coincidence Window (frames)</label
-            >
-            <input type="number" id="coincidenceWindow" value="4" />
+        <div class="TabView" id="parameterTabContainer">
+          <div class="tab-title-container">
+            <!-- Tab Titles -->
+            <div class="tab" id="gameTab">Game</div>
+            <div class="tab" id="networkTab">Network</div>
+            <div class="tab" id="learningTab">Learning</div>
           </div>
-          <div class="ParameterControl">
-            <label for="hebbianStrengthChange"
-              >Hebbian Strength Change</label
-            >
-            <input type="number" id="hebbianStrengthChange" value="0.1" />
+
+          <div class="tab-content-container">
+            <!-- Tab Content: Game Parameters -->
+            <div class="tab-content" id="gameParameters">
+              <div class="ParameterControl">
+                <label for="numColumns">Number of Columns</label>
+                <input type="number" id="numColumns" value="5" />
+              </div>
+              <div class="ParameterControl">
+                <label for="numRows">Number of Rows</label>
+                <input type="number" id="numRows" value="7" />
+              </div>
+              <div class="ParameterControl">
+                <label for="numVisualRows">Number of Visual Rows</label>
+                <input type="number" id="numVisualRows" value="3" />
+              </div>
+              <div class="ParameterControl">
+                <label for="numBricks">Number of Bricks</label>
+                <input type="number" id="numBricks" value="2" />
+              </div>
+              <div class="ParameterControl">
+                <label for="maxBrickFallSpeed">Max Brick Fall Speed</label>
+                <input type="number" id="maxBrickFallSpeed" value="2" />
+              </div>
+              <div class="ParameterControl">
+                <label for="maxBrickStartingOffset">Max Brick Offset</label>
+                <input type="number" id="maxBrickStartingOffset" value="1" />
+              </div>
+            </div>
+
+            <!-- Tab Content: Network Structure Parameters -->
+            <div class="tab-content" id="networkStructureParameters">
+              <div class="ParameterControl">
+                <label for="maxNodes">Max Nodes</label>
+                <input type="number" id="maxNodes" value="50" />
+              </div>
+              <div class="ParameterControl">
+                <label for="maxEdges">Max Edges (Arrows)</label>
+                <input type="number" id="maxEdges" value="500" />
+              </div>
+              <div class="ParameterControl">
+                <label for="maxActivation">Max Activation</label>
+                <input type="number" id="maxActivation" value="10" />
+              </div>
+              <div class="ParameterControl">
+                <label for="minActivation">Min Activation</label>
+                <input type="number" id="minActivation" value="-10" />
+              </div>
+              <div class="ParameterControl">
+                <label for="maxEdgeStrength">Max Edge Strength</label>
+                <input type="number" id="maxEdgeStrength" value="5" />
+              </div>
+              <div class="ParameterControl">
+                <label for="minEdgeStrength">Min Edge Strength</label>
+                <input type="number" id="minEdgeStrength" value="-5" />
+              </div>
+              <div class="ParameterControl">
+                <label for="visualActivationLevel"
+                  >Visual Activation Level</label
+                >
+                <input type="number" id="visualActivationLevel" value="1" />
+              </div>
+              <div class="ParameterControl">
+                <label for="visualSignalDecayTimeConstant"
+                  >Visual Signal Decay Time Constant (frames)</label
+                >
+                <input
+                  type="number"
+                  id="visualSignalDecayTimeConstant"
+                  value="5"
+                />
+              </div>
+            </div>
+
+            <!-- Tab Content: Learning Parameters -->
+            <div class="tab-content" id="learningParameters">
+              <div class="ParameterControl">
+                <label for="spikeActivationLevel">Spike Activation Level</label>
+                <input type="number" id="spikeActivationLevel" value="1" />
+              </div>
+              <div class="ParameterControl">
+                <label for="spikeDecayTimeConstant"
+                  >Spike Decay Time Constant (frames)</label
+                >
+                <input type="number" id="spikeDecayTimeConstant" value="5" />
+              </div>
+              <div class="ParameterControl">
+                <label for="reward">Reward</label>
+                <input type="number" id="reward" value="0.1" />
+              </div>
+              <div class="ParameterControl">
+                <label for="threatRewardMultiplier"
+                  >Threat Reward Multiplier</label
+                >
+                <input type="number" id="threatRewardMultiplier" value="2" />
+              </div>
+              <div class="ParameterControl">
+                <label for="punishment">Punishment</label>
+                <input type="number" id="punishment" value="15" />
+              </div>
+              <div class="ParameterControl">
+                <label for="fitnessDecayTimeConstant"
+                  >Fitness Decay Time Constant (frames)</label
+                >
+                <input type="number" id="fitnessDecayTimeConstant" value="15" />
+              </div>
+              <div class="ParameterControl">
+                <label for="coincidenceDropOffTimeConstant"
+                  >Hebbian Reinforcement Coincidence Drop Off Time Constant
+                  (frames)</label
+                >
+                <input
+                  type="number"
+                  id="coincidenceDropOffTimeConstant"
+                  value="4"
+                />
+              </div>
+              <div class="ParameterControl">
+                <label for="hebbianStrengthChange"
+                  >Hebbian Strength Change</label
+                >
+                <input type="number" id="hebbianStrengthChange" value="0.1" />
+              </div>
+              <div class="ParameterControl">
+                <label for="nodeStartingHitPoints"
+                  >Node Starting Hit Points</label
+                >
+                <input type="number" id="nodeStartingHitPoints" value="10" />
+              </div>
+              <div class="ParameterControl">
+                <label for="edgeStartingHitPoints"
+                  >Edge Starting Hit Points</label
+                >
+                <input type="number" id="edgeStartingHitPoints" value="10" />
+              </div>
+              <div class="ParameterControl">
+                <label for="nodeSpawnRateFitnessAffected"
+                  >Node Spawn Rate (Fitness Affected)</label
+                >
+                <input
+                  type="number"
+                  id="nodeSpawnRateFitnessAffected"
+                  value="0.2"
+                />
+              </div>
+              <div class="ParameterControl">
+                <label for="edgeSpawnRateFitnessAffected"
+                  >Edge Spawn Rate (Fitness Affected)</label
+                >
+                <input
+                  type="number"
+                  id="edgeSpawnRateFitnessAffected"
+                  value="0.2"
+                />
+              </div>
+            </div>
           </div>
-          <div class="ParameterControl">
-            <label for="nodeStartingHitPoints"
-              >Node Starting Hit Points</label
-            >
-            <input type="number" id="nodeStartingHitPoints" value="10" />
-          </div>
-          <div class="ParameterControl">
-            <label for="edgeStartingHitPoints"
-              >Edge Starting Hit Points</label
-            >
-            <input type="number" id="edgeStartingHitPoints" value="10" />
-          </div>
-          <div class="ParameterControl">
-            <label for="nodeSpawnRateFitnessAffected"
-              >Node Spawn Rate (Fitness Affected)</label
-            >
-            <input type="number" id="nodeSpawnRateFitnessAffected" value="0.2" />
-          </div>
-          <div class="ParameterControl">
-            <label for="edgeSpawnRateFitnessAffected"
-              >Edge Spawn Rate (Fitness Affected)</label
-            >
-            <input type="number" id="edgeSpawnRateFitnessAffected" value="0.2" />
-          </div>
-     
+        </div>
       </div>
+
       <div class="Panel Panel2">
         <h1 class="PanelTitle">Visualization</h1>
       </div>
@@ -142,8 +189,5 @@
         <h1 class="PanelTitle">Game</h1>
       </div>
     </div>
-
-    <!-- Link to JavaScript file -->
-    <script src="index.js"></script>
   </body>
 </html>
