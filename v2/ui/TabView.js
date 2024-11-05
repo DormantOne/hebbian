@@ -8,10 +8,12 @@ export default class TabView {
       return;
     }
 
+    this.containerVisibleDisplay =
+      this.container.getAttribute("data-init-display") || "block";
+
     this.tabClass = "tab"; // Class for tab buttons
     this.contentClass = "tab-content"; // Class for tab content sections
     this.activeClass = "tab-active"; // Class to highlight the active tab
-
 
     // Get all tab buttons and content sections
     this.tabs = Array.from(
@@ -64,7 +66,8 @@ export default class TabView {
 
     // Show the selected content section and activate the corresponding tab
     this.tabs[index].classList.add(this.activeClass);
-    this.contents[index].style.display = "block";
+    this.contents[index].style.display =
+      this.contents[index].getAttribute("data-init-display") || "blok";
   }
 
   showTabByTitle(title) {
