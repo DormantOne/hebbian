@@ -13,13 +13,20 @@
       crossorigin="anonymous"
     />
 
-    <!-- The loading of KaTeX is deferred to speed up page rendering -->
     <script
       defer
       src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
       integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg"
       crossorigin="anonymous"
     ></script>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
 
     <link rel="stylesheet" href="index.css" />
 
@@ -137,33 +144,117 @@
               data-init-display="flex"
             >
               <div class="ParameterControl">
-                <label for="spikeActivationLevel">Spike Activation Level</label>
-                <input type="number" id="spikeActivationLevel" value="1" />
+                <label for="spikeActivation"
+                  >Spike Activation
+                  <span class="katex">V_{s}</span> (unitless)</label
+                >
+                <aside>
+                  <p>The intensity of each spike that a node fires.</p>
+                  <p>
+                    When a nodes total value exceed threshold
+                    <span class="katex">V_{t}</span> it fires a spike of value
+                    <span class="katex">V_{s}</span> which will later decay
+                    exponentially according to
+                    <span class="katex">\tau_{s}</span>
+                  </p>
+                </aside>
+                <input type="number" id="spikeActivationLevel" value="1.0" />
               </div>
               <div class="ParameterControl">
                 <label for="spikeDecayTimeConstant"
-                  >Spike Decay Time Constant (frames)</label
+                  >Spike Decay Time Constant
+                  <span class="katex">\tau_{s}</span> (s)</label
                 >
+                <aside>
+                  <p>
+                    The rate at which the transmitted value from a node spike
+                    decays overtime
+                  </p>
+                  <p class="katex">
+                    v(t)=V_s e^{-\frac{1}{\tau_s}(t-t_{spike})}
+                  </p>
+                </aside>
                 <input type="number" id="spikeDecayTimeConstant" value="5" />
               </div>
               <div class="ParameterControl">
-                <label for="reward">Reward</label>
+                <label for="spikeDecayTimeConstant"
+                  >Spike Refractory Period
+                  <span class="katex">T_{s}</span> (s)</label
+                >
+                <aside>
+                  The time in which another spike cannot occur even if threshold
+                  <span class="katex">V_{t}</span> is exceeded
+                </aside>
+                <input type="number" id="spikeDecayTimeConstant" value="5" />
+              </div>
+              <div class="ParameterControl">
+                <label for="reward"
+                  >Survival Reward
+                  <span class="katex">R_{survive}</span> (s<sup>-1</sup>)</label
+                >
+                <aside>
+                  <p>
+                    The (base) amount of ambient fitness the player gains per
+                    second survived
+                  </p>
+                </aside>
                 <input typse="number" id="reward" value="0.1" />
               </div>
               <div class="ParameterControl">
-                <label for="threatRewardMultiplier"
-                  >Threat Reward Multiplier</label
+                <label for="punishment"
+                  >Death Punishment
+                  <span class="katex">P_{death}</span> (unitless)</label
                 >
-                <input type="number" id="threatRewardMultiplier" value="2" />
+                <aside>
+                  <p>
+                    The amount of ambient fitness the player loses
+                    (instantaneously) on death
+                  </p>
+                </aside>
+                <input type="number" id="punishment" value="15" />
               </div>
               <div class="ParameterControl">
-                <label for="punishment">Punishment</label>
+                <label for="punishment"
+                  >Threat Bonus Proximity
+                  <span class="katex">d_{bonus}</span> (unitless)</label
+                >
+                <aside>
+                  <p>
+                    Determines the max distance (as a fraction of sensor max
+                    distance) at which an obstacle contributes to the "threat
+                    bonus"
+                  </p>
+                  <p>
+                    The "threat bonus" increases the survival reward for the
+                    player. The survival reward is adjusted according to how
+                    many sensor rays report obstacles within the threat bonus
+                    proximity
+                  </p>
+                  <pre><code class="language-javascript">
+const numThreatRays = sensorRays.filter(ray =>
+  ray.distance < d_bonus * sensorMaxDistance
+).length;
+
+const numRays = sensorRays.length;
+
+const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
+                  </code></pre>
+                </aside>
                 <input type="number" id="punishment" value="15" />
               </div>
               <div class="ParameterControl">
                 <label for="fitnessDecayTimeConstant"
-                  >Fitness Decay Time Constant (frames)</label
+                  >Fitness Decay Ratio
+                  <span class="katex">r_f</span> (s<sup>-1</sup>)</label
                 >
+                <aside>
+                  <p>
+                    Affects how we approximate decay of ambient fitness level
+                    over time.
+                  </p>
+                  <p>The fitness decay behavior is governed by (javascript):</p>
+                  <pre><code     class="language-javascript">const nextAmbientFitness = (r_f / frameRate) * currentAmbientFitness;</code></pre>
+                </aside>
                 <input type="number" id="fitnessDecayTimeConstant" value="15" />
               </div>
               <div class="ParameterControl">
@@ -179,8 +270,8 @@
                     reinforcement
                   </p>
                   <p class="katex">
-                    \Delta_{strength}(edge,t) = \alpha_h
-                    e^{-\tau_h^2(t_{source}-t_{sink})^2}
+                    \Delta_{strength}(edge,t) = F_a\alpha_h
+                    e^{-\frac{1}{\tau_h^2}(t_{source}-t_{sink})^2}
                   </p>
                 </aside>
                 <input
@@ -202,14 +293,16 @@
                     <span class="katex">t</span>.
                   </p>
                   <p class="katex">
-                    \Delta_{strength}(edge,t) = \alpha_h
-                    e^{-\tau_h^2(t_{source}-t_{sink})^2}
+                    \Delta_{strength}(edge,t) = F_a\alpha_h
+                    e^{-\frac{1}{\tau_h^2}(t_{source}-t_{sink})^2}
                   </p>
                 </aside>
                 <input type="number" id="hebbianStrengthChange" value="0.1" />
               </div>
               <div class="ParameterControl">
-                <label for="nodeStartingHitPoints">Node Inactive Lifetime (s)</label>
+                <label for="nodeStartingHitPoints"
+                  >Node Inactive Lifetime (s)</label
+                >
                 <aside>
                   The amount of consecutive time a node can spend inactive (no
                   spikes) before removal.
@@ -217,7 +310,9 @@
                 <input type="number" id="nodeStartingHitPoints" value="0.5" />
               </div>
               <div class="ParameterControl">
-                <label for="edgeStartingHitPoints">Edge Inactive Lifetime (s)</label>
+                <label for="edgeStartingHitPoints"
+                  >Edge Inactive Lifetime (s)</label
+                >
                 <aside>
                   The amount of consecutive time an edge can spend inactive (no
                   spikes in either source or sink node) before removal.
@@ -228,7 +323,7 @@
               <div class="ParameterControl">
                 <label for="nodeSpawnRateFitnessAffected"
                   >Node Spawn Rate
-                  <span class="katex">r_{spawnNode}</span>
+                  <span class="katex">r_{s_{n}}</span>
                   (s<sup>-1</sup>)</label
                 >
                 <aside>
@@ -236,9 +331,7 @@
                     The number of nodes, on average, that will spawn per second.
                     Node spawning is randomize and is governed by (javascript):
                   </p>
-                  <pre
-                    style="width: 100%; text-align: center; display: block"
-                  ><code>const shouldSpawn = Math.random() &leq; rSpawnNode;</code></pre>
+                  <pre><code    class="language-javascript">const shouldSpawn = Math.random() &leq; r_s_n;</code></pre>
                   <p>
                     Typically, nodes should spawn much less frequently than
                     edges.
@@ -253,7 +346,7 @@
               <div class="ParameterControl">
                 <label for="edgeSpawnRateFitnessAffected"
                   >Edge Spawn Rate
-                  <span class="katex">r_{spawnEdge}</span>
+                  <span class="katex">r_{s_{e}}</span>
                   (s<sup>-1</sup>)</label
                 >
                 <aside>
@@ -262,9 +355,7 @@
                     second. Edge spawning is randomize and is governed by
                     (javascript):
                   </p>
-                  <pre
-                    style="width: 100%; text-align: center; display: block"
-                  ><code>const shouldSpawn = Math.random() &leq; rSpawnEdge;</code></pre>
+                  <pre><code   class="language-javascript">const shouldSpawn = Math.random() &leq; r_s_e;</code></pre>
                   <p>
                     Typically, edges should spawn much more frequently than
                     nodes.

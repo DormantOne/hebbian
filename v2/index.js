@@ -17,15 +17,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (!hasKatexBlock && !hasKatexInline) {
       displayMode = !defaultOrExplicitDisplayIsFormOfInline;
-
-      console.info(`
-                Element had neither katex-block or katex-inline.
-                Element computed style has display of "${defaultOrExplicitDisplay}".
-                This value corresponds to katex display format akin to CSS \`${
-                  displayMode ? "block" : "inline"
-                }\`.`);
-    }else{
-        displayMode = hasKatexBlock;
+    } else {
+      displayMode = hasKatexBlock;
     }
     const content = element.textContent || element.innerText;
     // Just for proper type safety
@@ -38,6 +31,11 @@ document.addEventListener("DOMContentLoaded", () => {
     katex.render(content, element, {
       throwOnError: false,
       displayMode: displayMode,
+    });
+    document.querySelectorAll(".language-javascript").forEach((element) => {
+      if (!element.getAttribute("data-highlighted")) {
+        hljs.highlightElement(element)
+      }
     });
   });
 });
