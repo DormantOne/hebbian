@@ -84,17 +84,6 @@ body {
 .Panel4 {
 }
 
-/* .ControlPanelContainer {
-  max-width: 100%;
-  max-height: calc(50vh - 3rem);
-  overflow: auto;
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-} */
-
 .Panel5 {
 }
 
@@ -107,19 +96,8 @@ body {
   font-size: var(--panel-title-font-size);
   width: 100%;
   height: var(--panel-title-height);
-  /* 
-  If we set the line height to be that of the container, instead
-  of the font size (i.e. 1em)
-
-  Then this gives a vert+horiz centering effect without needing to specify padding
-  */
   line-height: var(--panel-title-height);
   text-align: center;
-
-  /* 
-  Unfortunately, many semantic elements have a default margin or padding
-  Need to undo it
-  */
   margin: 0;
   padding: 0;
 }
@@ -187,15 +165,6 @@ body {
   grid-template-rows: auto 1fr;
   background-color: rgb(248, 219, 134);
   overflow: visible;
-  /* row-gap: 8px; */
-
-  /* Once again, use fixed height + line-height matching trick */
-  /* 
-    Also we take advantage of element-level scoping
-    Such that the title height here only applies to the title/tab-title height
-    For any given TabView
-   */
-
   --title-height: 1.5rem;
   --title-font-size: 1rem;
 }
@@ -220,18 +189,6 @@ body {
 
 .tab-content-container {
   width: 100%;
-  /* 
-  This restricts the tabview at this time to only
-  the one used in Panel1
-
-  This is bad
-  In the future we need to add a variable such as
-
-  --tabview-container-height
-
-  Since it seems as though nested grids dont always work as expected
-
-  */
   height: calc(100vh - var(--panel-title-height) - var(--title-height));
   max-height: calc(100vh - var(--panel-title-height) - var(--title-height));
   overflow-y: auto;
