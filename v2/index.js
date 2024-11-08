@@ -1,7 +1,7 @@
 import TabView from "./ui/TabView.js";
 
 document.addEventListener("DOMContentLoaded", () => {
-  new TabView("parameterTabContainer", 0, "grid").start();
+  new TabView("parameterTabContainer", 0).start();
   document.querySelectorAll(".katex").forEach((element) => {
     let displayMode = undefined;
     const hasKatexBlock = element.classList.contains("katex-block");

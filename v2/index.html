@@ -36,15 +36,12 @@
   </head>
   <body>
     <div class="MainContainer">
-      <h1 class="PanelTitle">Parameters</h1>
-      <h1 class="PanelTitle">Visualization</h1>
-      <h1 class="PanelTitle">Game</h1>
-
       <div class="Panel Panel1">
+        <h1 class="PanelTitle">Parameters</h1>
         <div
-          class="TabView"
+          class="TabView Panel1Content"
           id="parameterTabContainer"
-          data-init-display="block"
+          data-init-display="grid"
         >
           <div class="tab-title-container">
             <!-- Tab Titles -->
@@ -79,15 +76,19 @@
                 <input type="number" id="numBricks" value="2" />
               </div>
               <div class="ParameterControl">
-                <label for="maxBrickFallSpeed">Icicle Average Spawn Rate (s<sup>-1</sup>)</label>
+                <label for="maxBrickFallSpeed"
+                  >Icicle Average Spawn Rate (s<sup>-1</sup>)</label
+                >
                 <aside>
                   <p>Each frame the probability of spawning a new icycle is:</p>
-                  <pre ><code class="language-javascript">icycleAverageSpawnRate / frameRate</code></pre>
+                  <pre><code class="language-javascript">icycleAverageSpawnRate / frameRate</code></pre>
                 </aside>
                 <input type="number" id="maxBrickFallSpeed" value="2" />
               </div>
               <div class="ParameterControl">
-                <label for="maxBrickFallSpeed">Player Movement Speed (m/s)</label>
+                <label for="maxBrickFallSpeed"
+                  >Player Movement Speed (m/s)</label
+                >
                 <input type="number" id="maxBrickFallSpeed" value="2" />
               </div>
             </div>
@@ -378,15 +379,17 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
         </div>
       </div>
 
-      <div class="Panel Panel2"></div>
+      <div class="Panel Panel2">
+        <h1 class="PanelTitle">Visualization</h1>
+      </div>
 
-      <div class="Panel Panel3"></div>
+      <div class="Panel Panel3">
+        <h1 class="PanelTitle">Game</h1>
+      </div>
 
-      <h1 class="PanelTitle">Controls</h1>
-      <h1 class="PanelTitle">Monitor</h1>
-      <h1 class="PanelTitle">Debug</h1>
+      <!-- <div class="Panel Panel4">
+        <h1 class="PanelTitle">Controls</h1>
 
-      <div class="Panel Panel4">
         <div class="ControlPanelContainer">
           <div class="ControlledBy">
             <div class="ControlledByCaption">Controlled By:</div>
@@ -411,11 +414,15 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
             <button type="button" class="ControlPanelButton">Stop</button>
           </div>
         </div>
+      </div> -->
+
+      <div class="Panel Panel5">
+        <h1 class="PanelTitle">Monitor</h1>
       </div>
 
-      <div class="Panel Panel5"></div>
-
-      <div class="Panel Panel6"></div>
+      <div class="Panel Panel6">
+        <h1 class="PanelTitle">Debug</h1>
+      </div>
     </div>
   </body>
 </html>
