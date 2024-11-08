@@ -72,13 +72,13 @@ const R = 0.7
 const r = 0.3
 const tipLength = 0.3
 
-const C1 =PM.scaledBy(PM.directionVector(Math.PI/2 - 2* Math.PI / 3),R)
+const C1 = PM.scaledBy(PM.directionVector(Math.PI/2 + 2* Math.PI / 3),R)
 const C2 = PM.scaledBy(PM.directionVector(Math.PI/2),R)
-const C3 = PM.scaledBy(PM.directionVector(Math.PI/2 + 2* Math.PI / 3),R)
+const C3 =PM.scaledBy(PM.directionVector(Math.PI/2 - 2* Math.PI / 3),R)
 
-drawDot(C1,r,"black",2,"blue")
+drawDot(C1,r,"black",2,"red")
 drawDot(C2,r,"black",2,"green")
-drawDot(C3,r,"black",2,"red")
+drawDot(C3,r,"black",2,"blue")
 
 connectDots(C1,r,C2,r,"black",2,45,tipLength)
 connectDots(C2,r,C3,r,"black",2,45,tipLength)
