@@ -14,28 +14,7 @@ body {
 }
 
 .MainContainer {
-  
-  /* 
-  After testing,
-  found out nested grids not working reliable to constrain content as desired
 
-  As a last resort we instead just use CSS variables and calc
-  to constrain our layouts
-
-  The drawback is now we need to make an informed decision about what fixed height to give the headers
-  as opposed to css computing it given font size and padding
-
-  :(
-
-  Warning: when using fixed header sizes, ensure font size (line height) plus padding is less than or
-  equal to the total height of the header
-
-  Consider instead using text-align: center and then
-  setting the line height to the height of the header
-  :(
-
-
-  */
   width: 100vw;
   height: 100vh;
   max-height: 100vh;
@@ -65,30 +44,27 @@ body {
   overflow: visible;
   grid-row-start: 1;
   grid-row-end: 3;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto 1fr;
   height: 100vh;
   max-height: 100vh;
 }
 
-.Panel1Content {
+.Panel1TabView {
   width: 100%;
-  height: calc( 100vh - var(--panel-title-height));
+  height: 100%;
 }
 
+.Panel2 {}
 
-.Panel2 {
-}
+.Panel3 {}
 
-.Panel3 {
-}
+.Panel4 {}
 
-.Panel4 {
-}
+.Panel5 {}
 
-.Panel5 {
-}
-
-.Panel6 {
-}
+.Panel6 {}
 
 .PanelTitle {
   background-color: skyblue;
@@ -189,8 +165,8 @@ body {
 
 .tab-content-container {
   width: 100%;
-  height: calc(100vh - var(--panel-title-height) - var(--title-height));
-  max-height: calc(100vh - var(--panel-title-height) - var(--title-height));
+  height: 100%;
+  max-height: 100%;
   overflow-y: auto;
 }
 
@@ -233,11 +209,25 @@ body {
   margin-top: -4px;
   box-shadow: 0px 0px 4px 2px rgba(0, 0, 0, 0.5);
 }
+
 .tab:not(.tab-active):active {
   z-index: 2;
   transform: scale(0.9);
   margin-top: -4px;
   box-shadow: 0px 0px 2px 2px rgba(0, 0, 0, 0.5);
+}
+
+
+.ControlPanelContainer {
+  width: 100%;
+  height: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: start;
+  gap: 0.5rem;
+  padding: 0.5rem;
+
 }
 
 .ControlPanelButton {
@@ -285,12 +275,3 @@ body {
 .ControlledBy .ControlledByCaption {
   font-size: 1.25rem;
 }
-.SimulationStartStopContainer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: roww;
-  gap: 0.5rem;
-}
-
-
