@@ -33,8 +33,8 @@
 <body>
   <div class="MainContainer">
     <div class="Panel Panel1">
-      <h1 class="PanelTitle">Controls</h1>
-      <div class="ControlPanelContainer">
+      <h1 class="PanelTitle height-item-1">Controls</h1>
+      <div class="ControlPanelContainer height-item-2">
         <div class="ControlledBy">
           <div class="ControlledByCaption">Controlled By:</div>
           <div class="ControlledByOptions">
@@ -51,9 +51,9 @@
         <button type="button" class="ControlPanelButton ml-auto">Start</button>
         <button type="button" class="ControlPanelButton">Stop</button>
       </div>
-      <h1 class="PanelTitle">Parameters</h1>
+      <h1 class="PanelTitle height-item-3">Parameters</h1>
       <div class="TabView Panel1TabView" id="parameterTabContainer" data-init-display="grid">
-        <div class="tab-title-container">
+        <div class="tab-title-container height-item-4">
           <div class="tab tab-active" id="gameTab">Game</div>
           <div class="tab" id="networkTab">Network</div>
           <div class="tab" id="learningTab">Learning</div>
@@ -67,7 +67,6 @@
             </div>
             <div class="ParameterControl">
               <label for="numRows">Playfield Height (m)</label>
-              <aside>Note: Icicles fall (accelerate) at 9.8 m/s^2</aside>
               <input type="number" id="numRows" value="7" />
             </div>
             <div class="ParameterControl">
@@ -80,10 +79,6 @@
             </div>
             <div class="ParameterControl">
               <label for="maxBrickFallSpeed">Icicle Average Spawn Rate (s<sup>-1</sup>)</label>
-              <aside>
-                <p>Each frame the probability of spawning a new icycle is:</p>
-                <pre><code class="language-javascript">icycleAverageSpawnRate / frameRate</code></pre>
-              </aside>
               <input type="number" id="maxBrickFallSpeed" value="2" />
             </div>
             <div class="ParameterControl">
@@ -289,12 +284,6 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
               <aside>
                 <p>
                   The number of nodes, on average, that will spawn per second.
-                  Node spawning is randomize and is governed by (javascript):
-                </p>
-                <pre><code class="language-javascript">const shouldSpawn = Math.random() < (r_s_n / frameRate);</code></pre>
-                <p>
-                  Typically, nodes should spawn much less frequently than
-                  edges.
                 </p>
               </aside>
               <input type="number" id="nodeSpawnRateFitnessAffected" value="0.01" />
@@ -305,20 +294,8 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                 (s<sup>-1</sup>)</label>
               <aside>
                 <p>
-                  The number of edges, on a given node, that will spawn per
-                  second. Edge spawning is randomize and is governed by
-                  (javascript):
-                </p>
-                <pre><code   class="language-javascript">const shouldSpawn = Math.random() < (r_s_e / frameRate);</code></pre>
-                <p>
-                  Typically, edges should spawn much more frequently than
-                  nodes.
-                </p>
-                <p>
-                  In this simulation, instead of simulating reconnection, we
-                  simulate edge removal (probabalistically) follwed by new
-                  edge spawn.
-                </p>
+                  The average number of edges, on a given node, that will spawn per
+                  second
               </aside>
               <input type="number" id="edgeSpawnRateFitnessAffected" value="0.1" />
             </div>

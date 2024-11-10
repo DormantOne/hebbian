@@ -1,11 +1,19 @@
 export default class TabView {
   constructor(tabViewID, defaultTab = 0) {
     // Store the main container element
+    // Container for entire tabview
     this.container = document.getElementById(tabViewID);
 
     if (!this.container) {
       console.error(`Element with ID ${tabViewID} not found.`);
       return;
+    }
+
+    // Container for portion after the tab select widget
+    this.contentContainer = this.container.querySelector('.tab-content-container');
+
+    if (!this.contentContainer) {
+      console.error("TabView outer container was located but it was not configured with a valid content container.");
     }
 
     this.containerVisibleDisplay =
@@ -24,6 +32,24 @@ export default class TabView {
     );
 
     this.defaultTab = defaultTab;
+
+  }
+
+  constrainToFractionOfWindowHeight(getUsedHeight) {
+
+    const fraction = (window.innerHeight-getUsedHeight())/window.innerHeight
+
+    const applyConstraint = () => {
+      this.contentContainer.style.height = `${fraction * window.innerHeight}px`
+      this.contentContainer.style.maxHeight = `${fraction * window.innerHeight}px`
+
+    }
+
+    applyConstraint()
+
+    window.addEventListener("resize", applyConstraint)
+
+    return this
   }
 
   start() {
@@ -67,7 +93,7 @@ export default class TabView {
     // Show the selected content section and activate the corresponding tab
     this.tabs[index].classList.add(this.activeClass);
     this.contents[index].style.display =
-      this.contents[index].getAttribute("data-init-display") || "blok";
+      this.contents[index].getAttribute("data-init-display") || "block";
   }
 
   showTabByTitle(title) {

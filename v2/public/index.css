@@ -9,7 +9,7 @@
 body {
   width: 100vw;
   height: 100vh;
-  overflow: auto;
+  overflow: hidden;
   font-family: Arial, sans-serif;
 }
 
@@ -30,8 +30,6 @@ body {
 .Panel {
   background-color: white;
   width: 100%;
-  position: relative;
-  overflow-y: auto;
   display: grid;
   flex-direction: column;
   align-items: center;
@@ -41,12 +39,12 @@ body {
 }
 
 .Panel1 {
-  overflow: visible;
+  overflow:visible;
   grid-row-start: 1;
   grid-row-end: 3;
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: auto auto auto 1fr;
+  grid-template-rows: auto auto auto auto;
   height: 100vh;
   max-height: 100vh;
 }
@@ -135,10 +133,8 @@ body {
 .TabView {
   width: 100%;
   height: 100%;
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr;
+  display: flex;
+  flex-direction: column;
   background-color: rgb(248, 219, 134);
   overflow: visible;
   --title-height: 1.5rem;
@@ -147,13 +143,11 @@ body {
 
 .tab-content {
   width: 100%;
-  position: relative;
 }
 
 .tab-title-container {
   background-color: black;
   width: 100%;
-  position: relative;
   display: flex;
   flex-direction: row;
   align-items: stretch;
@@ -165,8 +159,6 @@ body {
 
 .tab-content-container {
   width: 100%;
-  height: 100%;
-  max-height: 100%;
   overflow-y: auto;
 }
 

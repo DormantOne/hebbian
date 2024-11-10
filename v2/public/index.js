@@ -1,7 +1,17 @@
 import TabView from "./ui/TabView.js";
 
-document.addEventListener("DOMContentLoaded", () => {
-  new TabView("parameterTabContainer", 0).start();
+window.onload = () => {
+  new TabView("parameterTabContainer", 0).constrainToFractionOfWindowHeight(() => {
+    let total = 0
+    for (let n = 1; n <= 4; n++) {
+      const elem = document.querySelector(`.height-item-${n}`)
+
+      total += elem.clientHeight
+
+    }
+    return total
+
+  }).start();
   document.querySelectorAll(".katex").forEach((element) => {
     let displayMode = undefined;
     const hasKatexBlock = element.classList.contains("katex-block");
@@ -38,4 +48,4 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
-});
+}
