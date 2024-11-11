@@ -31,13 +31,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
 
     <link rel="stylesheet" href="utils.css" />
+    <link rel="stylesheet" href="theme.css" />
     <link rel="stylesheet" href="index.css" />
 
     <script defer src="ui/TabView.js" type="module"></script>
 
     <script defer src="index.js" type="module"></script>
     <script defer src="Simulation.js" type="module"></script>
-
   </head>
 
   <body>
@@ -75,10 +75,29 @@
               </div>
             </div>
           </div>
-          <button id="startSimulation" type="button" class="ControlPanelButton ml-auto">
+          <button
+            id="startSimulation"
+            type="button"
+            class="ControlPanelButton ml-auto"
+          >
             Start
           </button>
-          <button id="stopSimulation" type="button" class="ControlPanelButton">Stop</button>
+          <button
+            id="stopSimulation"
+            type="button"
+            class="ControlPanelButton"
+            style="display: none"
+          >
+            Stop
+          </button>
+          <button
+            id="pauseResumeSimulation"
+            type="button"
+            class="ControlPanelButton"
+            style="display: none"
+          >
+            Pause
+          </button>
         </div>
         <h1 class="PanelTitle height-item-3">Parameters</h1>
         <div
@@ -399,7 +418,8 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
       </div>
 
       <div class="Panel Panel6">
-        <h1 class="PanelTitle">Console</h1>
+        <h1 class="PanelTitle">Debug Console</h1>
+        <div class="DebugConsole"></div>
       </div>
     </div>
   </body>

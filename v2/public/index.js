@@ -1,17 +1,19 @@
 import TabView from "./ui/TabView.js";
+import DebugConsole from "./ui/DebugConsole.js";
+import Simulation from "./Simulation.js";
 
 window.onload = () => {
-  new TabView("parameterTabContainer", 0).constrainToFractionOfWindowHeight(() => {
-    let total = 0
-    for (let n = 1; n <= 4; n++) {
-      const elem = document.querySelector(`.height-item-${n}`)
+  new TabView("parameterTabContainer", 0)
+    .constrainToFractionOfWindowHeight(() => {
+      let total = 0;
+      for (let n = 1; n <= 4; n++) {
+        const elem = document.querySelector(`.height-item-${n}`);
 
-      total += elem.clientHeight
-
-    }
-    return total
-
-  }).start();
+        total += elem.clientHeight;
+      }
+      return total;
+    })
+    .start();
   document.querySelectorAll(".katex").forEach((element) => {
     let displayMode = undefined;
     const hasKatexBlock = element.classList.contains("katex-block");
@@ -44,15 +46,22 @@ window.onload = () => {
     });
     document.querySelectorAll(".language-javascript").forEach((element) => {
       if (!element.getAttribute("data-highlighted")) {
-        hljs.highlightElement(element)
+        hljs.highlightElement(element);
       }
     });
-  })
+  });
 
-  document.findElementById("startSimulation").addEventListener("click", () => {
-
-  })
+  document.getElementById("startSimulation").addEventListener("click", () => {
+    if(window.activeSimulation){
+      DebugConsole.write("error","A previous simulation was not stopped properly. Try refreshing the page.")
+      return
+    }
+    DebugConsole.write("info", "Starting simulation...");
+    window.activeSimulation = new Simulation().start();
+  });
   document.getElementById("stopSimulation").addEventListener("click", () => {
-
-  })
-}
+    DebugConsole.write("info", "Stopping simulation...");
+  });
+  document.getElementById("pauseResumeSimulation").addEventListener("click", () => {
+  });
+};

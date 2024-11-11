@@ -1,0 +1,49 @@
+.theme-log {
+  background-color: rgb(230, 230, 230);
+  color: black;
+}
+
+.theme-danger {
+  background-color: #dc3545;
+  color: #ffffff;
+}
+
+.theme-error {
+  background-color: #dc3545;
+  color: #ffffff;
+}
+
+.theme-success {
+  background-color: #28a745;
+  color: #ffffff;
+}
+
+.theme-info {
+  background-color: #17a2b8;
+  color: #ffffff;
+}
+
+.theme-warning {
+  background-color: #ffc107;
+  color: #000000;
+}
+
+.theme-primary {
+  background-color: #007bff;
+  color: #ffffff;
+}
+
+.theme-secondary {
+  background-color: #6c757d;
+  color: #ffffff;
+}
+
+.theme-light {
+  background-color: #f8f9fa;
+  color: #000000;
+}
+
+.theme-dark {
+  background-color: #343a40;
+  color: #ffffff;
+}
