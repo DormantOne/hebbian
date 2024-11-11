@@ -1,216 +1,273 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hebbian Neural Network Plays Icicle Dodge Game</title>
 
-  <title>Hebbian Neural Network Plays Icicle Dodge Game</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
 
-  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+      integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+"
+      crossorigin="anonymous"
+    />
 
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
-    integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous" />
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+      integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg"
+      crossorigin="anonymous"
+    ></script>
 
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
-    integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg"
-    crossorigin="anonymous"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <link rel="stylesheet" href="utils.css" />
+    <link rel="stylesheet" href="index.css" />
 
-  <link rel="stylesheet" href="utils.css" />
-  <link rel="stylesheet" href="index.css" />
+    <script defer src="ui/TabView.js" type="module"></script>
 
-  <script defer src="ui/TabView.js" type="module"></script>
+    <script defer src="index.js" type="module"></script>
+    <script defer src="Simulation.js" type="module"></script>
 
-  <script defer src="index.js" type="module"></script>
+  </head>
 
-</head>
-
-<body>
-  <div class="MainContainer">
-    <div class="Panel Panel1">
-      <h1 class="PanelTitle height-item-1">Controls</h1>
-      <div class="ControlPanelContainer height-item-2">
-        <div class="ControlledBy">
-          <div class="ControlledByCaption">Controlled By:</div>
-          <div class="ControlledByOptions">
-            <label >
-              <input type="radio" id="controlledByHuman" name="controlledBy" checked />
-              Human
-            </label>
-            <label >
-              <input type="radio" id="controlledByAI" name="controlledBy" />
-              AI
-            </label>
+  <body>
+    <div class="MainContainer">
+      <div class="Panel Panel1">
+        <h1 class="PanelTitle height-item-1">Controls</h1>
+        <div class="ControlPanelContainer height-item-2">
+          <div class="ControlledBy">
+            <div class="ControlledByCaption">Controlled By:</div>
+            <div class="ControlledByOptions">
+              <div class="ControlledByOption">
+                <label>
+                  <input
+                    id="controlledByHuman"
+                    value="Human"
+                    type="radio"
+                    id="controlledByHuman"
+                    name="controlledBy"
+                    checked
+                  />
+                  Human</label
+                >
+              </div>
+              <div class="ControlledByOption">
+                <label>
+                  <input
+                    id="controlledByAI"
+                    value="AI"
+                    type="radio"
+                    id="controlledByAI"
+                    name="controlledBy"
+                  />
+                  AI</label
+                >
+              </div>
+            </div>
           </div>
+          <button id="startSimulation" type="button" class="ControlPanelButton ml-auto">
+            Start
+          </button>
+          <button id="stopSimulation" type="button" class="ControlPanelButton">Stop</button>
         </div>
-        <button type="button" class="ControlPanelButton ml-auto">Start</button>
-        <button type="button" class="ControlPanelButton">Stop</button>
-      </div>
-      <h1 class="PanelTitle height-item-3">Parameters</h1>
-      <div class="TabView Panel1TabView" id="parameterTabContainer" data-init-display="grid">
-        <div class="tab-title-container height-item-4">
-          <div class="tab tab-active" id="gameTab">Game</div>
-          <div class="tab" id="networkTab">Network</div>
-          <div class="tab" id="learningTab">Learning</div>
-        </div>
-
-        <div class="tab-content-container">
-          <div class="tab-content ParameterList display-flex" style="display: flex" id="gameParameters"
-            data-init-display="flex">
-            <div class="ParameterControl">
-              <label >Playfield Width (m)</label>
-              <input type="number" id="playfieldWidth" value="15" />
-            </div>
-            <div class="ParameterControl">
-              <label >Playfield Height (m)</label>
-              <input type="number" id="playfieldHeight" value="45" />
-            </div>
-            <div class="ParameterControl">
-              <label >Icicle Width (m)</label>
-              <input type="number" id="icicleWidth" value="0.25" />
-            </div>
-            <div class="ParameterControl">
-              <label >Icicle Height (m)</label>
-              <input type="number" id="icicleHeight" value="0.5" />
-            </div>
-            <div class="ParameterControl">
-              <label >Icicle Average Spawn Rate (s<sup>-1</sup>)</label>
-              <input type="number" id="icicleAverageSpawnRate" value="1" />
-            </div>
-            <div class="ParameterControl">
-              <label >Player Radius (m)</label>
-              <input type="number" id="playerRadius" value="2" />
-            </div>
-            <div class="ParameterControl">
-              <label >Player Movement Speed (m/s)</label>
-              <input type="number" id="playerMovementSpeed" value="2" />
-            </div>
+        <h1 class="PanelTitle height-item-3">Parameters</h1>
+        <div
+          class="TabView Panel1TabView"
+          id="parameterTabContainer"
+          data-init-display="grid"
+        >
+          <div class="tab-title-container height-item-4">
+            <div class="tab tab-active" id="gameTab">Game</div>
+            <div class="tab" id="networkTab">Network</div>
+            <div class="tab" id="learningTab">Learning</div>
           </div>
-          <div class="tab-content ParameterList display-none" style="display: none" id="networkStructureParameters"
-            data-init-display="flex">
-            <div class="ParameterControl">
-              <label >Num Sensor Rays</label>
-              <input type="number" id="numSensorRays" value="90" />
-            </div>
-            <div class="ParameterControl">
-              <label >Sensor FOV (degrees)</label>
-              <input type="number" id="maxNodes" value="135" />
-            </div>
-            <div class="ParameterControl">
-              <label >Sensor Max Distance (m)</label>
-              <input type="number" id="maxNodes" value="20" />
-            </div>
-            <div class="ParameterControl">
-              <label >Max Nodes</label>
-              <input type="number" id="maxNodes" value="50" />
-            </div>
-            <div class="ParameterControl">
-              <label >Max Edges (Arrows)</label>
-              <input type="number" id="maxEdges" value="500" />
-            </div>
-            <div class="ParameterControl">
-              <label >Max Absolute Node Value</label>
-              <aside>
-                <p>A hard cap on the absolute value of a node</p>
-                <p>Helps prevent runaway growth and NaN/Inf values</p>
-              </aside>
-              <input type="number" id="maxAbsoluteNodeValue" value="10" />
-            </div>
-            <div class="ParameterControl">
-              <label >Max Absolute Edge Strength</label>
-              <aside>
-                <p>A hard cap on the absolute strength of an edge</p>
-                <p>Helps prevent runaway growth and NaN/Inf values</p>
-              </aside>
-              <input type="number" id="maxAbsoluteEdgeStrength" value="5" />
-            </div>
-          </div>
-          <div class="tab-content ParameterList display-none" style="display: none" id="learningParameters"
-            data-init-display="flex">
-            <div class="ParameterControl">
-              <label >Spike Activation Level
-                <span class="katex">V_{s}</span> (unitless)</label>
-              <aside>
-                <p>The intensity of each spike that a node fires.</p>
-                <p>
-                  When a nodes total value exceed threshold
-                  <span class="katex">V_{t}</span> it fires a spike of value
-                  <span class="katex">V_{s}</span> which will later decay
-                  exponentially according to
-                  <span class="katex">\tau_{s}</span>
-                </p>
-              </aside>
-              <input type="number" id="spikeActivationLevel" value="1.0" />
-            </div>
-            <div class="ParameterControl">
-              <label >Spike Decay Time Constant
-                <span class="katex">\tau_{s}</span> (s)</label>
-              <aside>
-                <p>
-                  The rate at which the transmitted value from a node spike
-                  decays overtime
-                </p>
-                <p class="katex">
-                  v(t)=V_s e^{-\frac{1}{\tau_s}(t-t_{spike})}
-                </p>
-              </aside>
-              <input type="number" id="spikeDecayTimeConstant" value="0.5" />
-            </div>
-            <div class="ParameterControl">
-              <label >Spike Refractory Period
-                <span class="katex">T_{s}</span> (s)</label>
-              <aside>
-                <p>
-                  The time in which another spike cannot occur even if threshold
-                  <span class="katex">V_{t}</span> is exceeded
-                </p>
 
-              </aside>
-              <input type="number" id="spikeRefractoryPeriod" value="0.05" />
+          <div class="tab-content-container">
+            <div
+              class="tab-content ParameterList display-flex"
+              style="display: flex"
+              id="gameParameters"
+              data-init-display="flex"
+            >
+              <div class="ParameterControl">
+                <label>Playfield Width (m)</label>
+                <input type="number" id="playfieldWidth" value="15" />
+              </div>
+              <div class="ParameterControl">
+                <label>Playfield Height (m)</label>
+                <input type="number" id="playfieldHeight" value="45" />
+              </div>
+              <div class="ParameterControl">
+                <label>Icicle Width (m)</label>
+                <input type="number" id="icicleWidth" value="0.25" />
+              </div>
+              <div class="ParameterControl">
+                <label>Icicle Height (m)</label>
+                <input type="number" id="icicleHeight" value="0.5" />
+              </div>
+              <div class="ParameterControl">
+                <label>Icicle Average Spawn Rate (s<sup>-1</sup>)</label>
+                <input type="number" id="icicleAverageSpawnRate" value="1" />
+              </div>
+              <div class="ParameterControl">
+                <label>Player Radius (m)</label>
+                <input type="number" id="playerRadius" value="2" />
+              </div>
+              <div class="ParameterControl">
+                <label>Player Movement Speed (m/s)</label>
+                <input type="number" id="playerMovementSpeed" value="2" />
+              </div>
             </div>
-            <div class="ParameterControl">
-              <label >Survival Reward
-                <span class="katex">R_{survive}</span> (s<sup>-1</sup>)</label>
-              <aside>
-                <p>
-                  The (base) amount of ambient fitness the player gains per
-                  second survived
-                </p>
-              </aside>
-              <input typse="number" id="survivalReward" value="0.1" />
+            <div
+              class="tab-content ParameterList display-none"
+              style="display: none"
+              id="networkStructureParameters"
+              data-init-display="flex"
+            >
+              <div class="ParameterControl">
+                <label>Num Sensor Rays</label>
+                <input type="number" id="numSensorRays" value="90" />
+              </div>
+              <div class="ParameterControl">
+                <label>Sensor FOV (degrees)</label>
+                <input type="number" id="maxNodes" value="135" />
+              </div>
+              <div class="ParameterControl">
+                <label>Sensor Max Distance (m)</label>
+                <input type="number" id="maxNodes" value="20" />
+              </div>
+              <div class="ParameterControl">
+                <label>Max Nodes</label>
+                <input type="number" id="maxNodes" value="50" />
+              </div>
+              <div class="ParameterControl">
+                <label>Max Edges (Arrows)</label>
+                <input type="number" id="maxEdges" value="500" />
+              </div>
+              <div class="ParameterControl">
+                <label>Max Absolute Node Value</label>
+                <aside>
+                  <p>A hard cap on the absolute value of a node</p>
+                  <p>Helps prevent runaway growth and NaN/Inf values</p>
+                </aside>
+                <input type="number" id="maxAbsoluteNodeValue" value="10" />
+              </div>
+              <div class="ParameterControl">
+                <label>Max Absolute Edge Strength</label>
+                <aside>
+                  <p>A hard cap on the absolute strength of an edge</p>
+                  <p>Helps prevent runaway growth and NaN/Inf values</p>
+                </aside>
+                <input type="number" id="maxAbsoluteEdgeStrength" value="5" />
+              </div>
             </div>
-            <div class="ParameterControl">
-              <label >Death Punishment
-                <span class="katex">P_{death}</span> (unitless)</label>
-              <aside>
-                <p>
-                  The amount of ambient fitness the player loses
-                  (instantaneously) on death
-                </p>
-              </aside>
-              <input type="number" id="deathPunishment" value="15" />
-            </div>
-            <div class="ParameterControl">
-              <label >Threat Bonus Proximity
-                <span class="katex">d_{bonus}</span> (unitless)</label>
-              <aside>
-                <p>
-                  Determines the max distance (as a fraction of sensor max
-                  distance) at which an obstacle contributes to the "threat
-                  bonus"
-                </p>
-                <p>
-                  The "threat bonus" increases the survival reward for the
-                  player. The survival reward is adjusted according to how
-                  many sensor rays report obstacles within the threat bonus
-                  proximity
-                </p>
-                <pre><code class="language-javascript">
+            <div
+              class="tab-content ParameterList display-none"
+              style="display: none"
+              id="learningParameters"
+              data-init-display="flex"
+            >
+              <div class="ParameterControl">
+                <label
+                  >Spike Activation Level
+                  <span class="katex">V_{s}</span> (unitless)</label
+                >
+                <aside>
+                  <p>The intensity of each spike that a node fires.</p>
+                  <p>
+                    When a nodes total value exceed threshold
+                    <span class="katex">V_{t}</span> it fires a spike of value
+                    <span class="katex">V_{s}</span> which will later decay
+                    exponentially according to
+                    <span class="katex">\tau_{s}</span>
+                  </p>
+                </aside>
+                <input type="number" id="spikeActivationLevel" value="1.0" />
+              </div>
+              <div class="ParameterControl">
+                <label
+                  >Spike Decay Time Constant
+                  <span class="katex">\tau_{s}</span> (s)</label
+                >
+                <aside>
+                  <p>
+                    The rate at which the transmitted value from a node spike
+                    decays overtime
+                  </p>
+                  <p class="katex">
+                    v(t)=V_s e^{-\frac{1}{\tau_s}(t-t_{spike})}
+                  </p>
+                </aside>
+                <input type="number" id="spikeDecayTimeConstant" value="0.5" />
+              </div>
+              <div class="ParameterControl">
+                <label
+                  >Spike Refractory Period
+                  <span class="katex">T_{s}</span> (s)</label
+                >
+                <aside>
+                  <p>
+                    The time in which another spike cannot occur even if
+                    threshold
+                    <span class="katex">V_{t}</span> is exceeded
+                  </p>
+                </aside>
+                <input type="number" id="spikeRefractoryPeriod" value="0.05" />
+              </div>
+              <div class="ParameterControl">
+                <label
+                  >Survival Reward
+                  <span class="katex">R_{survive}</span> (s<sup>-1</sup>)</label
+                >
+                <aside>
+                  <p>
+                    The (base) amount of ambient fitness the player gains per
+                    second survived
+                  </p>
+                </aside>
+                <input typse="number" id="survivalReward" value="0.1" />
+              </div>
+              <div class="ParameterControl">
+                <label
+                  >Death Punishment
+                  <span class="katex">P_{death}</span> (unitless)</label
+                >
+                <aside>
+                  <p>
+                    The amount of ambient fitness the player loses
+                    (instantaneously) on death
+                  </p>
+                </aside>
+                <input type="number" id="deathPunishment" value="15" />
+              </div>
+              <div class="ParameterControl">
+                <label
+                  >Threat Bonus Proximity
+                  <span class="katex">d_{bonus}</span> (unitless)</label
+                >
+                <aside>
+                  <p>
+                    Determines the max distance (as a fraction of sensor max
+                    distance) at which an obstacle contributes to the "threat
+                    bonus"
+                  </p>
+                  <p>
+                    The "threat bonus" increases the survival reward for the
+                    player. The survival reward is adjusted according to how
+                    many sensor rays report obstacles within the threat bonus
+                    proximity
+                  </p>
+                  <pre><code class="language-javascript">
 const numThreatRays = sensorRays.filter(ray =>
   ray.distance < d_bonus * sensorMaxDistance
 ).length;
@@ -219,119 +276,131 @@ const numRays = sensorRays.length;
 
 const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                   </code></pre>
-              </aside>
-              <input type="number" id="threatBonusProximity" value="0.75" />
-            </div>
-            <div class="ParameterControl">
-              <label >Fitness Decay Ratio
-                <span class="katex">r_f</span> (s<sup>-1</sup>)</label>
-              <aside>
-                <p>
-                  Affects how we approximate decay of ambient fitness level
-                  over time.
-                </p>
-                <p>The fitness decay behavior is governed by (javascript):</p>
-                <pre><code     class="language-javascript">const nextAmbientFitness = (1 - (r_f / frameRate)) * currentAmbientFitness;</code></pre>
-              </aside>
-              <input type="number" id="fitnessDecayRatio" value="0.5" />
-            </div>
-            <div class="ParameterControl">
-              <label >Hebbian Reinforcement Time Constant
-                <span class="katex">\tau_h</span>
-                <span>(s<sup>-1</sup>)</span></label>
-              <aside>
-                <p>
-                  Each time a spike occurs in a node, it also applies hebbian
-                  reinforcement to all edges originating to it. The
-                  reinforcement
-                </p>
-                <p class="katex">
-                  \Delta_{strength}(edge,t) = F_a\alpha_h
-                  e^{-\frac{1}{\tau_h^2}(t_{source}-t_{sink})^2}
-                </p>
-              </aside>
-              <input type="number" id="hebbianReinforcementTimeConstant" value="0.01" />
-            </div>
-            <div class="ParameterControl">
-              <label >Hebbian Strength Factor
-                <span class="katex">\alpha_h</span>
-                <span>(unitless)</span></label>
-              <aside>
-                <p>
-                  Controls the intensity in the change in strength of an edge
-                  given the the degree of spike coincidence at a given time
-                  <span class="katex">t</span>.
-                </p>
-                <p class="katex">
-                  \Delta_{strength}(edge,t) = F_a\alpha_h
-                  e^{-\frac{1}{\tau_h^2}(t_{source}-t_{sink})^2}
-                </p>
-              </aside>
-              <input type="number" id="hebbianStrengthFactor" value="0.1" />
-            </div>
-            <div class="ParameterControl">
-              <label >Node Inactive Lifetime (s)</label>
-              <aside>
-                The amount of consecutive time a node can spend inactive (no
-                spikes) before removal.
-              </aside>
-              <input type="number" id="nodeInactiveLifetime" value="0.5" />
-            </div>
-            <div class="ParameterControl">
-              <label >Edge Inactive Lifetime (s)</label>
-              <aside>
-                The amount of consecutive time an edge can spend inactive (no
-                spikes in either source or sink node) before removal.
-              </aside>
+                </aside>
+                <input type="number" id="threatBonusProximity" value="0.75" />
+              </div>
+              <div class="ParameterControl">
+                <label
+                  >Fitness Decay Ratio
+                  <span class="katex">r_f</span> (s<sup>-1</sup>)</label
+                >
+                <aside>
+                  <p>
+                    Affects how we approximate decay of ambient fitness level
+                    over time.
+                  </p>
+                  <p>The fitness decay behavior is governed by (javascript):</p>
+                  <pre><code     class="language-javascript">const nextAmbientFitness = (1 - (r_f / frameRate)) * currentAmbientFitness;</code></pre>
+                </aside>
+                <input type="number" id="fitnessDecayRatio" value="0.5" />
+              </div>
+              <div class="ParameterControl">
+                <label
+                  >Hebbian Reinforcement Time Constant
+                  <span class="katex">\tau_h</span>
+                  <span>(s<sup>-1</sup>)</span></label
+                >
+                <aside>
+                  <p>
+                    Each time a spike occurs in a node, it also applies hebbian
+                    reinforcement to all edges originating to it. The
+                    reinforcement
+                  </p>
+                  <p class="katex">
+                    \Delta_{strength}(edge,t) = F_a\alpha_h
+                    e^{-\frac{1}{\tau_h^2}(t_{source}-t_{sink})^2}
+                  </p>
+                </aside>
+                <input
+                  type="number"
+                  id="hebbianReinforcementTimeConstant"
+                  value="0.01"
+                />
+              </div>
+              <div class="ParameterControl">
+                <label
+                  >Hebbian Strength Factor
+                  <span class="katex">\alpha_h</span>
+                  <span>(unitless)</span></label
+                >
+                <aside>
+                  <p>
+                    Controls the intensity in the change in strength of an edge
+                    given the the degree of spike coincidence at a given time
+                    <span class="katex">t</span>.
+                  </p>
+                  <p class="katex">
+                    \Delta_{strength}(edge,t) = F_a\alpha_h
+                    e^{-\frac{1}{\tau_h^2}(t_{source}-t_{sink})^2}
+                  </p>
+                </aside>
+                <input type="number" id="hebbianStrengthFactor" value="0.1" />
+              </div>
+              <div class="ParameterControl">
+                <label>Node Inactive Lifetime (s)</label>
+                <aside>
+                  The amount of consecutive time a node can spend inactive (no
+                  spikes) before removal.
+                </aside>
+                <input type="number" id="nodeInactiveLifetime" value="0.5" />
+              </div>
+              <div class="ParameterControl">
+                <label>Edge Inactive Lifetime (s)</label>
+                <aside>
+                  The amount of consecutive time an edge can spend inactive (no
+                  spikes in either source or sink node) before removal.
+                </aside>
 
-              <input type="number" id="edgeInactiveLifetime" value="0.5" />
-            </div>
-            <div class="ParameterControl">
-              <label >Node Spawn Rate
-                <span class="katex">r_{s_{n}}</span>
-                (s<sup>-1</sup>)</label>
-              <aside>
-                <p>
-                  The number of nodes, on average, that will spawn per second.
-                </p>
-              </aside>
-              <input type="number" id="nodeSpawnRate" value="0.2" />
-            </div>
-            <div class="ParameterControl">
-              <label >Edge Spawn Rate
-                <span class="katex">r_{s_{e}}</span>
-                (s<sup>-1</sup>)</label>
-              <aside>
-                <p>
-                  The average number of edges, on a given node, that will spawn per
-                  second
-              </aside>
-              <input type="number" id="edgeSpawnRate" value="2" />
+                <input type="number" id="edgeInactiveLifetime" value="0.5" />
+              </div>
+              <div class="ParameterControl">
+                <label
+                  >Node Spawn Rate
+                  <span class="katex">r_{s_{n}}</span>
+                  (s<sup>-1</sup>)</label
+                >
+                <aside>
+                  <p>
+                    The number of nodes, on average, that will spawn per second.
+                  </p>
+                </aside>
+                <input type="number" id="nodeSpawnRate" value="0.2" />
+              </div>
+              <div class="ParameterControl">
+                <label
+                  >Edge Spawn Rate
+                  <span class="katex">r_{s_{e}}</span>
+                  (s<sup>-1</sup>)</label
+                >
+                <aside>
+                  <p>
+                    The average number of edges, on a given node, that will
+                    spawn per second
+                  </p>
+                </aside>
+
+                <input type="number" id="edgeSpawnRate" value="2" />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
+      <div class="Panel Panel2">
+        <h1 class="PanelTitle">Visualization</h1>
+      </div>
+
+      <div class="Panel Panel3">
+        <h1 class="PanelTitle">Game</h1>
+      </div>
+
+      <div class="Panel Panel5">
+        <h1 class="PanelTitle">Monitor &amp; Metrics</h1>
+      </div>
+
+      <div class="Panel Panel6">
+        <h1 class="PanelTitle">Console</h1>
+      </div>
     </div>
-
-    <div class="Panel Panel2">
-      <h1 class="PanelTitle">Visualization</h1>
-    </div>
-
-    <div class="Panel Panel3">
-      <h1 class="PanelTitle">Game</h1>
-    </div>
-
-
-
-    <div class="Panel Panel5">
-      <h1 class="PanelTitle">Monitor &amp; Metrics</h1>
-    </div>
-
-    <div class="Panel Panel6">
-      <h1 class="PanelTitle">Console</h1>
-    </div>
-  </div>
-</body>
-
+  </body>
 </html>

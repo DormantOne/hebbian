@@ -47,5 +47,12 @@ window.onload = () => {
         hljs.highlightElement(element)
       }
     });
-  });
+  })
+
+  document.findElementById("startSimulation").addEventListener("click", () => {
+
+  })
+  document.getElementById("stopSimulation").addEventListener("click", () => {
+
+  })
 }
