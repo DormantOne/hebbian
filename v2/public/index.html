@@ -38,11 +38,11 @@
         <div class="ControlledBy">
           <div class="ControlledByCaption">Controlled By:</div>
           <div class="ControlledByOptions">
-            <label for="controlledByHuman">
+            <label >
               <input type="radio" id="controlledByHuman" name="controlledBy" checked />
               Human
             </label>
-            <label for="controlledByAI">
+            <label >
               <input type="radio" id="controlledByAI" name="controlledBy" />
               AI
             </label>
@@ -60,74 +60,80 @@
         </div>
 
         <div class="tab-content-container">
-          <div class="tab-content ParameterList display-flex" style="display: flex" id="gameParameters" data-init-display="flex">
+          <div class="tab-content ParameterList display-flex" style="display: flex" id="gameParameters"
+            data-init-display="flex">
             <div class="ParameterControl">
-              <label for="numColumns">Playfield Width (m)</label>
+              <label >Playfield Width (m)</label>
               <input type="number" id="numColumns" value="5" />
             </div>
             <div class="ParameterControl">
-              <label for="numRows">Playfield Height (m)</label>
+              <label >Playfield Height (m)</label>
               <input type="number" id="numRows" value="7" />
             </div>
             <div class="ParameterControl">
-              <label for="numVisualRows">Icicle Width (m)</label>
+              <label >Icicle Width (m)</label>
               <input type="number" id="numVisualRows" value="3" />
             </div>
             <div class="ParameterControl">
-              <label for="numBricks">Icicle Height (m)</label>
+              <label >Icicle Height (m)</label>
               <input type="number" id="numBricks" value="2" />
             </div>
             <div class="ParameterControl">
-              <label for="maxBrickFallSpeed">Icicle Average Spawn Rate (s<sup>-1</sup>)</label>
+              <label >Icicle Average Spawn Rate (s<sup>-1</sup>)</label>
               <input type="number" id="maxBrickFallSpeed" value="2" />
             </div>
             <div class="ParameterControl">
-              <label for="maxBrickFallSpeed">Player Movement Speed (m/s)</label>
+              <label >Player Radius (m)</label>
+              <input type="number" id="maxBrickFallSpeed" value="2" />
+            </div>
+            <div class="ParameterControl">
+              <label >Player Movement Speed (m/s)</label>
               <input type="number" id="maxBrickFallSpeed" value="2" />
             </div>
           </div>
           <div class="tab-content ParameterList display-none" style="display: none" id="networkStructureParameters"
             data-init-display="flex">
             <div class="ParameterControl">
-              <label for="maxNodes">Num Sensor Rays</label>
+              <label >Num Sensor Rays</label>
               <input type="number" id="maxNodes" value="50" />
             </div>
             <div class="ParameterControl">
-              <label for="maxNodes">Sensor FOV (degrees)</label>
+              <label >Sensor FOV (degrees)</label>
               <input type="number" id="maxNodes" value="50" />
             </div>
             <div class="ParameterControl">
-              <label for="maxNodes">Sensor Max Distance (m)</label>
+              <label >Sensor Max Distance (m)</label>
               <input type="number" id="maxNodes" value="50" />
             </div>
             <div class="ParameterControl">
-              <label for="maxNodes">Max Nodes</label>
+              <label >Max Nodes</label>
               <input type="number" id="maxNodes" value="50" />
             </div>
             <div class="ParameterControl">
-              <label for="maxEdges">Max Edges (Arrows)</label>
+              <label >Max Edges (Arrows)</label>
               <input type="number" id="maxEdges" value="500" />
             </div>
             <div class="ParameterControl">
-              <label for="maxActivation">Max Activation</label>
+              <label >Max Activation</label>
               <input type="number" id="maxActivation" value="10" />
             </div>
             <div class="ParameterControl">
-              <label for="minActivation">Min Activation</label>
+              <label >Min Activation</label>
               <input type="number" id="minActivation" value="-10" />
             </div>
             <div class="ParameterControl">
-              <label for="maxEdgeStrength">Max Edge Strength</label>
+              <label >Max Edge Strength</label>
               <input type="number" id="maxEdgeStrength" value="5" />
             </div>
             <div class="ParameterControl">
-              <label for="minEdgeStrength">Min Edge Strength</label>
+              <label >Min Edge Strength</label>
               <input type="number" id="minEdgeStrength" value="-5" />
             </div>
           </div>
-          <div class="tab-content ParameterList display-none" style="display: none" id="learningParameters" data-init-display="flex">
+          <div class="tab-content ParameterList display-none" style="display: none" id="learningParameters"
+            data-init-display="flex">
             <div class="ParameterControl">
-              <label for="spikeActivation">Spike Activation
+              <label >Spike Activation
                 <span class="katex">V_{s}</span> (unitless)</label>
               <aside>
                 <p>The intensity of each spike that a node fires.</p>
@@ -142,7 +148,7 @@
               <input type="number" id="spikeActivationLevel" value="1.0" />
             </div>
             <div class="ParameterControl">
-              <label for="spikeDecayTimeConstant">Spike Decay Time Constant
+              <label >Spike Decay Time Constant
                 <span class="katex">\tau_{s}</span> (s)</label>
               <aside>
                 <p>
@@ -156,16 +162,19 @@
               <input type="number" id="spikeDecayTimeConstant" value="5" />
             </div>
             <div class="ParameterControl">
-              <label for="spikeDecayTimeConstant">Spike Refractory Period
+              <label >Spike Refractory Period
                 <span class="katex">T_{s}</span> (s)</label>
               <aside>
-                The time in which another spike cannot occur even if threshold
-                <span class="katex">V_{t}</span> is exceeded
+                <p>
+                  The time in which another spike cannot occur even if threshold
+                  <span class="katex">V_{t}</span> is exceeded
+                </p>
+
               </aside>
               <input type="number" id="spikeDecayTimeConstant" value="5" />
             </div>
             <div class="ParameterControl">
-              <label for="reward">Survival Reward
+              <label >Survival Reward
                 <span class="katex">R_{survive}</span> (s<sup>-1</sup>)</label>
               <aside>
                 <p>
@@ -176,7 +185,7 @@
               <input typse="number" id="reward" value="0.1" />
             </div>
             <div class="ParameterControl">
-              <label for="punishment">Death Punishment
+              <label >Death Punishment
                 <span class="katex">P_{death}</span> (unitless)</label>
               <aside>
                 <p>
@@ -187,7 +196,7 @@
               <input type="number" id="punishment" value="15" />
             </div>
             <div class="ParameterControl">
-              <label for="punishment">Threat Bonus Proximity
+              <label >Threat Bonus Proximity
                 <span class="katex">d_{bonus}</span> (unitless)</label>
               <aside>
                 <p>
@@ -214,7 +223,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
               <input type="number" id="punishment" value="15" />
             </div>
             <div class="ParameterControl">
-              <label for="fitnessDecayTimeConstant">Fitness Decay Ratio
+              <label >Fitness Decay Ratio
                 <span class="katex">r_f</span> (s<sup>-1</sup>)</label>
               <aside>
                 <p>
@@ -227,7 +236,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
               <input type="number" id="fitnessDecayTimeConstant" value="15" />
             </div>
             <div class="ParameterControl">
-              <label for="coincidenceDropOffTimeConstant">Hebbian Reinforcement Time Constant
+              <label >Hebbian Reinforcement Time Constant
                 <span class="katex">\tau_h</span>
                 <span>(s<sup>-1</sup>)</span></label>
               <aside>
@@ -244,7 +253,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
               <input type="number" id="coincidenceDropOffTimeConstant" value="4" />
             </div>
             <div class="ParameterControl">
-              <label for="hebbianStrengthChange">Hebbian Strength Factor
+              <label >Hebbian Strength Factor
                 <span class="katex">\alpha_h</span>
                 <span>(unitless)</span></label>
               <aside>
@@ -261,7 +270,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
               <input type="number" id="hebbianStrengthChange" value="0.1" />
             </div>
             <div class="ParameterControl">
-              <label for="nodeStartingHitPoints">Node Inactive Lifetime (s)</label>
+              <label >Node Inactive Lifetime (s)</label>
               <aside>
                 The amount of consecutive time a node can spend inactive (no
                 spikes) before removal.
@@ -269,7 +278,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
               <input type="number" id="nodeStartingHitPoints" value="0.5" />
             </div>
             <div class="ParameterControl">
-              <label for="edgeStartingHitPoints">Edge Inactive Lifetime (s)</label>
+              <label >Edge Inactive Lifetime (s)</label>
               <aside>
                 The amount of consecutive time an edge can spend inactive (no
                 spikes in either source or sink node) before removal.
@@ -278,7 +287,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
               <input type="number" id="edgeStartingHitPoints" value="0.5" />
             </div>
             <div class="ParameterControl">
-              <label for="nodeSpawnRateFitnessAffected">Node Spawn Rate
+              <label >Node Spawn Rate
                 <span class="katex">r_{s_{n}}</span>
                 (s<sup>-1</sup>)</label>
               <aside>
@@ -289,7 +298,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
               <input type="number" id="nodeSpawnRateFitnessAffected" value="0.01" />
             </div>
             <div class="ParameterControl">
-              <label for="edgeSpawnRateFitnessAffected">Edge Spawn Rate
+              <label >Edge Spawn Rate
                 <span class="katex">r_{s_{e}}</span>
                 (s<sup>-1</sup>)</label>
               <aside>

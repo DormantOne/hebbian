@@ -56,15 +56,15 @@ export default class TabView {
     // Initialize event listeners and show the default tab
     this.initTabs();
 
-    // Select default tab by index or title (string)
-    if (typeof this.defaultTab === "string") {
-      this.showTabByTitle(defaultTab);
-    } else {
-      this.showTab(this.defaultTab); // Show the first tab by default (index 0)
-    }
+    // // Select default tab by index or title (string)
+    // if (typeof this.defaultTab === "string") {
+    //   this.showTabByTitle(defaultTab);
+    // } else {
+    //   this.showTab(this.defaultTab); // Show the first tab by default (index 0)
+    // }
 
     // Display the container now that setup is complete
-    this.container.style.display = this.containerVisibleDisplay;
+    // this.container.style.display = this.containerVisibleDisplay;
   }
 
   initTabs() {

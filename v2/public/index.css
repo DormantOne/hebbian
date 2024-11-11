@@ -23,8 +23,8 @@ body {
   background-color: black;
   grid-template-rows: 1fr 1fr;
   grid-template-columns: 1fr 1fr 1fr;
-  --panel-title-height: 2rem;
-  --panel-title-font-size: 1.5rem;
+  --panel-title-font-size: 2rem;
+  --panel-title-padding: 0.5rem;
 }
 
 .Panel {
@@ -39,7 +39,7 @@ body {
 }
 
 .Panel1 {
-  overflow:visible;
+  overflow: visible;
   grid-row-start: 1;
   grid-row-end: 3;
   display: grid;
@@ -52,6 +52,7 @@ body {
 .Panel1TabView {
   width: 100%;
   height: 100%;
+
 }
 
 .Panel2 {}
@@ -69,18 +70,16 @@ body {
   color: black;
   font-size: var(--panel-title-font-size);
   width: 100%;
-  height: var(--panel-title-height);
-  line-height: var(--panel-title-height);
   text-align: center;
   margin: 0;
-  padding: 0;
+  padding: var(--panel-title-padding);
 }
 
 .ParameterList {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.25rem;
+  gap: 0.5rem;
+  padding: 0.5rem;
 }
 
 .ParameterControl {
@@ -89,8 +88,8 @@ body {
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-start;
-  padding: 0.25rem;
-  gap: 0.25rem;
+  padding: 0.5rem;
+  gap: 1rem;
   width: 100%;
   border: 1px solid black;
   border-radius: 0.25rem;
@@ -101,6 +100,9 @@ body {
   display: block;
   width: 100%;
   word-wrap: break-word;
+  font-weight: bold;
+  margin: 0;
+  padding: 0;
 }
 
 .ParameterControl input {
@@ -112,18 +114,19 @@ body {
 }
 
 .ParameterControl aside {
-  font-size: 0.75rem;
-  display: block;
+  font-size: 1rem;
+  display: flex;
   width: 100%;
   word-wrap: break-word;
-  font-style: italic;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
 }
 
 .ParameterControl aside pre {
   font-size: 1rem;
   display: inline;
   white-space: pre-wrap;
-  font-style: normal;
   font-family: monospace;
   width: 100%;
   text-align: left;
@@ -135,10 +138,10 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: rgb(248, 219, 134);
   overflow: visible;
-  --title-height: 1.5rem;
-  --title-font-size: 1rem;
+  --title-font-size: 1.5rem;
+  --title-padding: 0.25rem;
+  --tab-enlarge: 1.05;
 }
 
 .tab-content {
@@ -146,45 +149,47 @@ body {
 }
 
 .tab-title-container {
-  background-color: black;
   width: 100%;
   display: flex;
   flex-direction: row;
   align-items: stretch;
   justify-content: flex-start;
   overflow: visible;
-  background-color: rgb(248, 219, 134);
-  height: var(--title-height);
+  gap: 1rem;
+  padding-top: 1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-bottom: 0rem;
 }
 
 .tab-content-container {
   width: 100%;
   overflow-y: auto;
+  background-color: rgb(248, 219, 134);
 }
 
 .tab {
   background-color: white;
   color: black;
   font-size: var(--title-font-size);
-  line-height: var(--title-height);
   margin: 0;
-  padding: 0;
+  padding: var(--title-padding);
   flex: 1;
   text-align: center;
   cursor: pointer;
   user-select: none;
   width: 100%;
   text-align: center;
-  height: var(--title-height);
   transition: all 0.2s ease-in-out;
   transform-origin: center;
   transform: scale(1);
+  border-radius: 0.5rem 0.5rem 0 0;
 }
 
 .tab.tab-active {
   background-color: rgb(218, 186, 90);
   cursor: auto;
-  margin-top: -4px;
+  transform: scale(var(--tab-enlarge));
   z-index: 1;
   box-shadow: 0px 0px 4px 2px rgba(0, 0, 0, 0.5);
 }
@@ -192,20 +197,18 @@ body {
 .tab:not(.tab-active) {
   background-color: lightgray;
   cursor: pointer;
-  margin-top: 0px;
   z-index: 0;
 }
 
 .tab:not(.tab-active):hover {
   z-index: 2;
-  margin-top: -4px;
+  transform: scale(var(--tab-enlarge));
   box-shadow: 0px 0px 4px 2px rgba(0, 0, 0, 0.5);
 }
 
 .tab:not(.tab-active):active {
   z-index: 2;
   transform: scale(0.9);
-  margin-top: -4px;
   box-shadow: 0px 0px 2px 2px rgba(0, 0, 0, 0.5);
 }
 
