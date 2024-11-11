@@ -14,13 +14,12 @@ body {
 }
 
 .MainContainer {
-
   width: 100vw;
   height: 100vh;
   max-height: 100vh;
 
   display: grid;
-  background-color: black;
+  background-color: white;
   grid-template-rows: 1fr 1fr;
   grid-template-columns: 1fr 1fr 1fr;
   --panel-title-font-size: 2rem;
@@ -52,22 +51,26 @@ body {
 .Panel1TabView {
   width: 100%;
   height: 100%;
-
 }
 
-.Panel2 {}
+.Panel2 {
+}
 
-.Panel3 {}
+.Panel3 {
+}
 
-.Panel4 {}
+.Panel4 {
+}
 
-.Panel5 {}
+.Panel5 {
+}
 
-.Panel6 {}
+.Panel6 {
+}
 
 .PanelTitle {
-  background-color: skyblue;
-  color: black;
+  background-color: teal;
+  color: white;
   font-size: var(--panel-title-font-size);
   width: 100%;
   text-align: center;
@@ -163,14 +166,15 @@ body {
 }
 
 .tab-content-container {
+  box-shadow: 0 0 4px 2px rgba(0, 0, 0, 0.5);
   width: 100%;
   overflow-y: auto;
   background-color: rgb(248, 219, 134);
+  z-index: 1;
 }
 
 .tab {
-  background-color: white;
-  color: black;
+  color: white;
   font-size: var(--title-font-size);
   margin: 0;
   padding: var(--title-padding);
@@ -187,31 +191,31 @@ body {
 }
 
 .tab.tab-active {
-  background-color: rgb(218, 186, 90);
+  background-color: cornflowerblue;
   cursor: auto;
   transform: scale(var(--tab-enlarge));
-  z-index: 1;
+  z-index: 2;
   box-shadow: 0px 0px 4px 2px rgba(0, 0, 0, 0.5);
 }
 
 .tab:not(.tab-active) {
-  background-color: lightgray;
+  background-color: rgb(195, 208, 210);
+  color: black;
   cursor: pointer;
   z-index: 0;
 }
 
 .tab:not(.tab-active):hover {
-  z-index: 2;
+  z-index: 3;
   transform: scale(var(--tab-enlarge));
   box-shadow: 0px 0px 4px 2px rgba(0, 0, 0, 0.5);
 }
 
 .tab:not(.tab-active):active {
-  z-index: 2;
+  z-index: 3;
   transform: scale(0.9);
   box-shadow: 0px 0px 2px 2px rgba(0, 0, 0, 0.5);
 }
-
 
 .ControlPanelContainer {
   width: 100%;
@@ -222,7 +226,6 @@ body {
   justify-content: start;
   gap: 0.5rem;
   padding: 0.5rem;
-
 }
 
 .ControlPanelButton {
