@@ -41,7 +41,7 @@
     <script defer src="SimulationError.js" type="module"></script>
     <script defer src="ui/parameter-input.js" type="module"></script>
     <script defer src="ui/layout.js" type="module"></script>
-    
+    <script defer src="text.js" type="module"></script>
   </head>
 
   <body>
@@ -139,7 +139,7 @@
                 <input type="number" id="icicleHeight" value="0.5" />
               </div>
               <div class="ParameterControl">
-                <label>Icicle Average Spawn Rate (s<sup>-1</sup>)</label>
+                <label>Icicle Average Spawn Rate (1/s)</label>
                 <input type="number" id="icicleAverageSpawnRate" value="1" />
               </div>
               <div class="ParameterControl">
@@ -163,11 +163,11 @@
               </div>
               <div class="ParameterControl">
                 <label>Sensor FOV (degrees)</label>
-                <input type="number" id="maxNodes" value="135" />
+                <input type="number" id="sensorFOV" value="135" />
               </div>
               <div class="ParameterControl">
                 <label>Sensor Max Distance (m)</label>
-                <input type="number" id="maxNodes" value="20" />
+                <input type="number" id="sensorMaxDistance" value="20" />
               </div>
               <div class="ParameterControl">
                 <label>Max Nodes</label>
@@ -250,7 +250,7 @@
               <div class="ParameterControl">
                 <label
                   >Survival Reward
-                  <span class="katex">R_{survive}</span> (s<sup>-1</sup>)</label
+                  <span class="katex">R_{survive}</span> (1/s)</label
                 >
                 <aside>
                   <p>
@@ -285,6 +285,9 @@
                     bonus"
                   </p>
                   <p>
+                    Applies only to icicles, not walls
+                  </p>
+                  <p>
                     The "threat bonus" increases the survival reward for the
                     player. The survival reward is adjusted according to how
                     many sensor rays report obstacles within the threat bonus
@@ -305,7 +308,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
               <div class="ParameterControl">
                 <label
                   >Fitness Decay Ratio
-                  <span class="katex">r_f</span> (s<sup>-1</sup>)</label
+                  <span class="katex">r_f</span> (1/s)</label
                 >
                 <aside>
                   <p>
@@ -321,7 +324,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                 <label
                   >Hebbian Reinforcement Time Constant
                   <span class="katex">\tau_h</span>
-                  <span>(s<sup>-1</sup>)</span></label
+                  <span>(1/s)</span></label
                 >
                 <aside>
                   <p>
@@ -380,7 +383,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                 <label
                   >Node Spawn Rate
                   <span class="katex">r_{s_{n}}</span>
-                  (s<sup>-1</sup>)</label
+                  (1/s)</label
                 >
                 <aside>
                   <p>
@@ -393,7 +396,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                 <label
                   >Edge Spawn Rate
                   <span class="katex">r_{s_{e}}</span>
-                  (s<sup>-1</sup>)</label
+                  (1/s)</label
                 >
                 <aside>
                   <p>

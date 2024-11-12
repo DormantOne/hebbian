@@ -3,6 +3,7 @@ import DebugConsole from "./ui/DebugConsole.js";
 import Simulation from "./Simulation.js";
 import { constrainElementFractionOfWindowSize } from "./ui/layout.js";
 
+
 window.onload = () => {
   new TabView("parameterTabContainer", 0)
     .constrainToFractionOfWindowHeight(() => {
@@ -59,7 +60,6 @@ window.onload = () => {
       DebugConsole.write("error","A previous simulation was not stopped properly. Try refreshing the page.")
       return
     }
-    DebugConsole.write("info", "Starting simulation...");
     try {
       window.activeSimulation = new Simulation().start();
     } catch (error) {
