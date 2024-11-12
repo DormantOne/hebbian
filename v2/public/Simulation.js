@@ -3,6 +3,7 @@ export default class Simulation{
 
     }
     start(){
+        // Collect parameter values
         return this
     }
     pause(){

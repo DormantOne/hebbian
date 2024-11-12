@@ -38,6 +38,8 @@
 
     <script defer src="index.js" type="module"></script>
     <script defer src="Simulation.js" type="module"></script>
+    <script defer src="SimulationError.js" type="module"></script>
+    <script defer src="ui/parameter-input.js" type="module"></script>
   </head>
 
   <body>
@@ -411,6 +413,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
 
       <div class="Panel Panel3">
         <h1 class="PanelTitle">Game</h1>
+        <canvas id="gameCanvas" width="0" height="0" style="display:none; width: 100%; height: 100%;"></canvas>
       </div>
 
       <div class="Panel Panel5">

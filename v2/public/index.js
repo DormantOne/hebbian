@@ -57,7 +57,14 @@ window.onload = () => {
       return
     }
     DebugConsole.write("info", "Starting simulation...");
-    window.activeSimulation = new Simulation().start();
+    try {
+      window.activeSimulation = new Simulation().start();
+    } catch (error) {
+      if(error instanceof SimulationError){
+        
+      }
+      window.activeSimulation = undefined
+    }
   });
   document.getElementById("stopSimulation").addEventListener("click", () => {
     DebugConsole.write("info", "Stopping simulation...");

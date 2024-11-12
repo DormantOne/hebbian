@@ -62,7 +62,7 @@ export default class DebugConsole {
     DebugConsole.scrollToBottom();
     if (variant === "log") {
       console.log(message);
-    } else if (variant === "danger") {
+    } else if (variant === "danger" || variant === "error") {
       console.error(message);
     } else if (variant === "warning") {
       console.warn(message);
@@ -72,4 +72,19 @@ export default class DebugConsole {
       console.log(message);
     }
   }
+
+  static log(message) {
+    DebugConsole.write("log", message);
+  }
+  static error(message) {
+    DebugConsole.write("error", message);
+  }
+  static warn(message) {
+    DebugConsole.write("warning", message);
+  }
+
+  static info(message) {
+    DebugConsole.write("info", message);
+  }
+
 }
