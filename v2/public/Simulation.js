@@ -5,7 +5,7 @@ export default class Simulation{
 
     }
     start(){
-        throw new SimulationError("This is a test error message")
+        throw new SimulationError("Simulation not yet implemented. Stay tuned!")
         return this
     }
     pause(){
