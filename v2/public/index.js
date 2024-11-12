@@ -1,6 +1,7 @@
 import TabView from "./ui/TabView.js";
 import DebugConsole from "./ui/DebugConsole.js";
 import Simulation from "./Simulation.js";
+import { constrainElementFractionOfWindowSize } from "./ui/layout.js";
 
 window.onload = () => {
   new TabView("parameterTabContainer", 0)
@@ -51,6 +52,8 @@ window.onload = () => {
     });
   });
 
+  constrainElementFractionOfWindowSize(document.querySelector(".DebugConsole"));
+
   document.getElementById("startSimulation").addEventListener("click", () => {
     if(window.activeSimulation){
       DebugConsole.write("error","A previous simulation was not stopped properly. Try refreshing the page.")
@@ -60,9 +63,7 @@ window.onload = () => {
     try {
       window.activeSimulation = new Simulation().start();
     } catch (error) {
-      if(error instanceof SimulationError){
-        
-      }
+      DebugConsole.reportErrorObject(error);
       window.activeSimulation = undefined
     }
   });

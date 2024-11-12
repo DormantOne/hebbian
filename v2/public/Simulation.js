@@ -1,9 +1,11 @@
+import SimulationError from './SimulationError.js'
+
 export default class Simulation{
     constructor(){
 
     }
     start(){
-        // Collect parameter values
+        throw new SimulationError("This is a test error message")
         return this
     }
     pause(){
