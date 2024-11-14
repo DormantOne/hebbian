@@ -55,21 +55,25 @@ window.onload = () => {
 
   constrainElementFractionOfWindowSize(document.querySelector(".DebugConsole"));
 
-  document.getElementById("startSimulation").addEventListener("click", () => {
-    if(window.activeSimulation){
-      DebugConsole.write("error","A previous simulation was not stopped properly. Try refreshing the page.")
-      return
-    }
+  function updateSimulationControlButtons(){
+
+  }
+
+  const simulation = new Simulation(updateSimulationControlButtons)
+
+  document.getElementById("startStopSimulation").addEventListener("click", () => {
+
     try {
-      window.activeSimulation = new Simulation().start();
+      if(simulation.getState() === "stopped" || simulation.getState() === "stopping"){
+        simulation.start();
+      }else{
+        simulation.stop();
+      }
     } catch (error) {
       DebugConsole.reportErrorObject(error);
-      window.activeSimulation = undefined
     }
   });
-  document.getElementById("stopSimulation").addEventListener("click", () => {
-    DebugConsole.write("info", "Stopping simulation...");
-  });
+
   document.getElementById("pauseResumeSimulation").addEventListener("click", () => {
   });
 };

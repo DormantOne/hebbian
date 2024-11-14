@@ -8,7 +8,57 @@ import { formatBulletedListEntry } from "./text.js";
 import DebugConsole from "./ui/DebugConsole.js";
 
 export default class Simulation {
-  constructor() {}
+  constructor(updateSimulationControlButtons) {
+    this.updateSimulationControlButtons = updateSimulationControlButtons
+    this.running = false
+    this.paused = false
+    this.stopping = false
+    this.pausing
+  }
+  getState(){
+    // Pause requested but a frame needs to finish
+    if(this.pausing){
+      return "pausing"
+    }
+    // Stop requested but a frame needs to finish
+    if(this.stopping){
+      return "stopping"
+    }
+    if(this.running){
+      if(this.paused){
+        return "paused"
+      }
+      return "running"
+    }
+    return "stopped"
+  }
+  __processFrame(){
+    const currentPerformanceTime = performance.now();
+
+    const deltaTieMillis = currentPerformanceTime - this.lastPerformanceTime;
+
+    this.lastPerformanceTime = currentPerformanceTime;
+
+    const deltaTime = deltaTieMillis / 1000;
+
+
+
+
+
+    if(this.running &&!this.paused){
+      // For the purposes of metrics
+      // We used this method to
+      // track the exact amount of time which the 
+      //  physics engine has processed
+      // as opposed to real world time
+      //
+      // This is a better reflection of 
+      // what actually occurred in-game
+      // and how well the player/AI performed
+    this.totalElapsedTime += deltaTime
+      requestAnimationFrame(this.__processFrame.bind(this))
+    }
+  }
   start() {
     const paramErrorMessages = [];
 
@@ -68,12 +118,17 @@ ${Object.entries(params)
   .join("\n")}
             `);
 
-    function sizeAndClearCanvas() {
-      const gameCanvasContainer = document.querySelector(
-        ".GameCanvasContainer"
-      );
 
-      const gameCanvas = document.querySelector(".GameCanvas");
+    const gameCanvasContainer = document.querySelector(
+      ".GameCanvasContainer"
+    );
+      
+    const gameCanvas = document.querySelector(".GameCanvas");
+
+    const ctx = gameCanvas.getContext("2d");
+
+    function sizeAndClearCanvas() {
+
 
       gameCanvas.style.display = "none";
 
@@ -97,7 +152,6 @@ ${Object.entries(params)
         gameCanvas.style.height = gameCanvasContainer.clientHeight - 8 + "px";
       }
 
-      const ctx = gameCanvas.getContext("2d");
       ctx.clearRect(0, 0, playfieldWidth, playfieldHeight);
 
       gameCanvas.style.display = "block";
@@ -106,12 +160,29 @@ ${Object.entries(params)
     sizeAndClearCanvas();
 
     window.addEventListener("resize", sizeAndClearCanvas);
+
+
+    this.running = true;
+    this.paused = false;
+    this.params = params;
+    this.ctx 
+    this.totalElapsedTime = 0
+    this.previousFramePerformanceTime = performance.now()
+    requestAnimationFrame(this.__processFrame.bind(this));
     return this;
   }
   pause() {
+    this.paused = true;
+    return this;
+  }
+  stop() {
+    this.running = false;
     return this;
   }
   resume() {
+    this.paused = false;
+    this.previousFramePerformanceTime = performance.now();
+    requestAnimationFrame(this.__processFrame.bind(this));
     return this;
   }
 }
