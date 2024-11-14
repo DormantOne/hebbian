@@ -1,0 +1,21 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "dictionaryDefinitions": [
+    {
+      "name": "generalTerms",
+      "path": "./.vscode/dictionaries/general-terms.txt"
+    },
+    {
+      "name": "programmingTerms",
+      "path": "./.vscode/dictionaries/programming-terms.txt"
+    },
+    {
+      "name": "projectTerms",
+      "path": "./.vscode/dictionaries/project-terms.txt"
+    }
+  ],
+  "dictionaries": ["generalTerms", "programmingTerms", "projectTerms"],
+  "ignorePaths": ["cspell.json", "Pipfile"],
+  "useGitignore": true
+}

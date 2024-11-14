@@ -3,7 +3,6 @@ import DebugConsole from "./ui/DebugConsole.js";
 import Simulation from "./Simulation.js";
 import { constrainElementFractionOfWindowSize } from "./ui/layout.js";
 
-
 window.onload = () => {
   new TabView("parameterTabContainer", 0)
     .constrainToFractionOfWindowHeight(() => {
@@ -55,25 +54,111 @@ window.onload = () => {
 
   constrainElementFractionOfWindowSize(document.querySelector(".DebugConsole"));
 
-  function updateSimulationControlButtons(){
+  function updateUIForSimulationState(state) {
+    function setThemeColor(element, themeColor) {
+      // Get the class list of the element
+      const classList = element.classList;
 
+      // Remove any existing classes with the 'theme-' prefix
+      classList.forEach((className) => {
+        if (className.startsWith("theme-")) {
+          classList.remove(className);
+        }
+      });
+
+      // Add the new class with the 'theme-' prefix according to themeColor
+      classList.add(`theme-${themeColor}`);
+    }
+    function clearThemeColor(element) {
+      const classList = element.classList;
+      classList.forEach((className) => {
+        if (className.startsWith("theme-")) {
+          classList.remove(className);
+        }
+      });
+    }
+    document.getElementById("currentSimulationState").textContent = state;
+    switch (state) {
+      case "running":
+        startStopSimulation.textContent = "Stop";
+        startStopSimulation.disabled = false;
+        setThemeColor(startStopSimulation, "danger");
+        pauseResumeSimulation.textContent = "Pause";
+        pauseResumeSimulation.disabled = false;
+        setThemeColor(pauseResumeSimulation, "warning");
+        break;
+      case "paused":
+        startStopSimulation.textContent = "";
+        startStopSimulation.disabled = true;
+        clearThemeColor(startStopSimulation);
+        pauseResumeSimulation.textContent = "Resume";
+        pauseResumeSimulation.disabled = false;
+        setThemeColor(pauseResumeSimulation, "action");
+        break;
+      case "stopped":
+        startStopSimulation.textContent = "Start";
+        startStopSimulation.disabled = false;
+        setThemeColor(startStopSimulation, "success");
+        pauseResumeSimulation.textContent = "";
+        pauseResumeSimulation.disabled = true;
+        clearThemeColor(pauseResumeSimulation);
+        break;
+      case "starting":
+        startStopSimulation.textContent = "Starting...";
+        startStopSimulation.disabled = true;
+        setThemeColor(startStopSimulation, "info");
+        pauseResumeSimulation.textContent = "";
+        pauseResumeSimulation.disabled = true;
+        clearThemeColor(pauseResumeSimulation);
+        break;
+      case "stopping":
+        startStopSimulation.textContent = "Stopping...";
+        startStopSimulation.disabled = true;
+        setThemeColor(startStopSimulation, "info");
+        pauseResumeSimulation.textContent = "";
+        pauseResumeSimulation.disabled = true;
+        clearThemeColor(pauseResumeSimulation);
+        break;
+      case "pausing":
+        startStopSimulation.textContent = "";
+        startStopSimulation.disabled = true;
+        clearThemeColor(startStopSimulation);
+        pauseResumeSimulation.textContent = "Pausing...";
+        pauseResumeSimulation.disabled = true;
+        setThemeColor(pauseResumeSimulation, "info");
+        break;
+      case "resuming":
+        startStopSimulation.textContent = "";
+        startStopSimulation.disabled = true;
+        clearThemeColor(startStopSimulation);
+        pauseResumeSimulation.textContent = "Resuming...";
+        pauseResumeSimulation.disabled = true;
+        setThemeColor(pauseResumeSimulation, "info")
+        break;
+      default:
+        throw new Error(`Unknown simulation state: ${state}`);
+    }
   }
 
-  const simulation = new Simulation(updateSimulationControlButtons)
+  const simulation = new Simulation(updateUIForSimulationState);
 
-  document.getElementById("startStopSimulation").addEventListener("click", () => {
-
-    try {
-      if(simulation.getState() === "stopped" || simulation.getState() === "stopping"){
-        simulation.start();
-      }else{
-        simulation.stop();
+  document
+    .getElementById("startStopSimulation")
+    .addEventListener("click", () => {
+      try {
+        simulation.handleStartStopButton();
+      } catch (error) {
+        DebugConsole.reportErrorObject(error);
       }
-    } catch (error) {
-      DebugConsole.reportErrorObject(error);
-    }
-  });
+    });
 
-  document.getElementById("pauseResumeSimulation").addEventListener("click", () => {
-  });
+  document
+    .getElementById("pauseResumeSimulation")
+    .addEventListener("click", () => {
+      try {
+        simulation.handlePauseResumeButton();
+      } catch (error) {
+        DebugConsole.reportErrorObject(error);
+      }
+    });
 };

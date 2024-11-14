@@ -79,21 +79,21 @@
               </div>
             </div>
           </div>
-          <button
-            id="startStopSimulation"
-            type="button"
-            class="ControlPanelButton ml-auto theme-success"
-          >
-            Start
-          </button>
-          <button
-            id="pauseResumeSimulation"
-            type="button"
-            class="ControlPanelButton theme-primary"
-            disabled
-          >
-            Pause
-          </button>
+          <div class="SimulationStartStopPauseResume">
+            <button
+              id="startStopSimulation"
+              type="button"
+              class="ControlPanelButton theme-success"
+            >
+              Start
+            </button>
+            <button
+              id="pauseResumeSimulation"
+              type="button"
+              class="ControlPanelButton"
+              disabled
+            ></button>
+          </div>
         </div>
         <h1 class="PanelTitle height-item-3">Parameters</h1>
         <div
@@ -120,7 +120,7 @@
               </div>
               <div class="ParameterControl">
                 <label>Playfield Height (m)</label>
-                <input type="number" id="playfieldHeight" value="45" />
+                <input type="number" id="playfieldHeight" value="30" />
               </div>
               <div class="ParameterControl">
                 <label>Icicle Width (m)</label>
@@ -420,6 +420,11 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
 
       <div class="Panel Panel5">
         <h1 class="PanelTitle">Monitor &amp; Metrics</h1>
+        <div class="MonitorAndMetricsContainer">
+          <h1 class="SimulationIs">
+            Simulation is <span id="currentSimulationState">stopped</span>.
+          </h1>
+        </div>
       </div>
 
       <div class="Panel Panel6">

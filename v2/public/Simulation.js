@@ -8,58 +8,15 @@ import { formatBulletedListEntry } from "./text.js";
 import DebugConsole from "./ui/DebugConsole.js";
 
 export default class Simulation {
-  constructor(updateSimulationControlButtons) {
-    this.updateSimulationControlButtons = updateSimulationControlButtons
-    this.running = false
-    this.paused = false
-    this.stopping = false
-    this.pausing
+  constructor(updateUIForSimulationState) {
+    this.updateUIForSimulationState = updateUIForSimulationState;
+    this.state = "stopped";
   }
-  getState(){
-    // Pause requested but a frame needs to finish
-    if(this.pausing){
-      return "pausing"
-    }
-    // Stop requested but a frame needs to finish
-    if(this.stopping){
-      return "stopping"
-    }
-    if(this.running){
-      if(this.paused){
-        return "paused"
-      }
-      return "running"
-    }
-    return "stopped"
+  getState() {
+    return this.state;
   }
-  __processFrame(){
-    const currentPerformanceTime = performance.now();
 
-    const deltaTieMillis = currentPerformanceTime - this.lastPerformanceTime;
-
-    this.lastPerformanceTime = currentPerformanceTime;
-
-    const deltaTime = deltaTieMillis / 1000;
-
-
-
-
-
-    if(this.running &&!this.paused){
-      // For the purposes of metrics
-      // We used this method to
-      // track the exact amount of time which the 
-      //  physics engine has processed
-      // as opposed to real world time
-      //
-      // This is a better reflection of 
-      // what actually occurred in-game
-      // and how well the player/AI performed
-    this.totalElapsedTime += deltaTime
-      requestAnimationFrame(this.__processFrame.bind(this))
-    }
-  }
-  start() {
+  __start() {
     const paramErrorMessages = [];
 
     const controlledBy = (
@@ -118,18 +75,16 @@ ${Object.entries(params)
   .join("\n")}
             `);
 
+    this.state = "starting";
+    this.__updateUIForSimulationState();
 
-    const gameCanvasContainer = document.querySelector(
-      ".GameCanvasContainer"
-    );
-      
+    const gameCanvasContainer = document.querySelector(".GameCanvasContainer");
+
     const gameCanvas = document.querySelector(".GameCanvas");
 
     const ctx = gameCanvas.getContext("2d");
 
     function sizeAndClearCanvas() {
-
-
       gameCanvas.style.display = "none";
 
       const gameCanvasContainerAspect =
@@ -161,28 +116,93 @@ ${Object.entries(params)
 
     window.addEventListener("resize", sizeAndClearCanvas);
 
-
-    this.running = true;
-    this.paused = false;
     this.params = params;
-    this.ctx 
-    this.totalElapsedTime = 0
-    this.previousFramePerformanceTime = performance.now()
+    this.ctx = ctx;
+
     requestAnimationFrame(this.__processFrame.bind(this));
-    return this;
   }
-  pause() {
-    this.paused = true;
-    return this;
+
+  __updateUIForSimulationState() {
+    this.updateUIForSimulationState(this.state);
   }
-  stop() {
-    this.running = false;
-    return this;
+
+  __processFrame() {
+    if (this.state === "starting" || this.state === "resuming") {
+      this.state = "running";
+      this.__updateUIForSimulationState();
+    }
+    const currentPerformanceTime = performance.now();
+
+    const deltaTimeMillis = currentPerformanceTime - this.lastPerformanceTime;
+
+    this.lastPerformanceTime = currentPerformanceTime;
+
+    const deltaTime = deltaTimeMillis / 1000;
+
+    this.totalElapsedTime += deltaTime;
+    if (
+      this.state === "starting" ||
+      this.state === "resuming" ||
+      this.state === "running"
+    ) {
+      requestAnimationFrame(this.__processFrame.bind(this));
+    } else {
+      if (this.state === "stopping") {
+        this.state = "stopped";
+        this.__updateUIForSimulationState();
+        return;
+      }
+      if (this.state === "pausing") {
+        this.state = "paused";
+        this.__updateUIForSimulationState();
+        return;
+      }
+    }
   }
-  resume() {
-    this.paused = false;
-    this.previousFramePerformanceTime = performance.now();
+
+  __stop() {
+    this.state = "stopping";
+    this.__updateUIForSimulationState();
+  }
+
+  __pause() {
+    this.state = "pausing";
+    this.__updateUIForSimulationState();
+  }
+
+  __resume() {
+    this.state = "resuming";
+    this.__updateUIForSimulationState();
     requestAnimationFrame(this.__processFrame.bind(this));
-    return this;
+  }
+
+  /**
+   * Handles the Start/Stop button being pressed
+   */
+  handleStartStopButton() {
+    if (this.state === "stopped") {
+      this.__start();
+    } else if (this.state === "running") {
+      this.__stop();
+    } else {
+      throw new SimulationError(
+        `Simulation is not ready to start or stop. Simulation is currently "${this.state}".`
+      );
+    }
+  }
+
+  /**
+   * Handles the Pause/Resume button being pressed
+   */
+  handlePauseResumeButton() {
+    if (this.state === "paused") {
+      this.__resume();
+    } else if (this.state === "running") {
+      this.__pause();
+    } else {
+      throw new SimulationError(
+        `Simulation is not ready to pause or resume. Simulation is currently "${this.state}".`
+      );
+    }
   }
 }
