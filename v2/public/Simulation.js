@@ -68,6 +68,44 @@ ${Object.entries(params)
   .join("\n")}
             `);
 
+    function sizeAndClearCanvas() {
+      const gameCanvasContainer = document.querySelector(
+        ".GameCanvasContainer"
+      );
+
+      const gameCanvas = document.querySelector(".GameCanvas");
+
+      gameCanvas.style.display = "none";
+
+      const gameCanvasContainerAspect =
+        gameCanvasContainer.clientWidth / gameCanvasContainer.clientHeight;
+
+      const playfieldWidth = params.playfieldWidth;
+      const playfieldHeight = params.playfieldHeight;
+      const playfieldAspect = playfieldWidth / playfieldHeight;
+
+      gameCanvas.width = playfieldWidth;
+      gameCanvas.height = playfieldHeight;
+
+      if (playfieldAspect >= gameCanvasContainerAspect) {
+        gameCanvas.style.width = gameCanvasContainer.clientWidth - 8 + "px";
+        gameCanvas.style.height =
+          gameCanvasContainer.clientWidth / playfieldAspect - 8 + "px";
+      } else {
+        gameCanvas.style.width =
+          gameCanvasContainer.clientHeight * playfieldAspect - 8 + "px";
+        gameCanvas.style.height = gameCanvasContainer.clientHeight - 8 + "px";
+      }
+
+      const ctx = gameCanvas.getContext("2d");
+      ctx.clearRect(0, 0, playfieldWidth, playfieldHeight);
+
+      gameCanvas.style.display = "block";
+    }
+
+    sizeAndClearCanvas();
+
+    window.addEventListener("resize", sizeAndClearCanvas);
     return this;
   }
   pause() {
