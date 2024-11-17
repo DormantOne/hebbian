@@ -58,17 +58,18 @@ window.onload = () => {
     function setThemeColor(element, themeColor) {
       // Get the class list of the element
       const classList = element.classList;
-
+  
       // Remove any existing classes with the 'theme-' prefix
       classList.forEach((className) => {
         if (className.startsWith("theme-")) {
           classList.remove(className);
         }
       });
-
+  
       // Add the new class with the 'theme-' prefix according to themeColor
       classList.add(`theme-${themeColor}`);
     }
+  
     function clearThemeColor(element) {
       const classList = element.classList;
       classList.forEach((className) => {
@@ -77,6 +78,17 @@ window.onload = () => {
         }
       });
     }
+  
+    // Enable/disable human vs AI radio buttons based on the simulation state
+    const radioButtons = document.querySelectorAll(
+      'input[name="controlledBy"]'
+    );
+    const enableRadioButtons = state === "stopped"; // Enable only if the simulation is stopped
+    radioButtons.forEach((button) => {
+      button.disabled = !enableRadioButtons;
+    });
+  
+    // Update UI elements based on the simulation state
     document.getElementById("currentSimulationState").textContent = state;
     switch (state) {
       case "running":
@@ -133,12 +145,13 @@ window.onload = () => {
         clearThemeColor(startStopSimulation);
         pauseResumeSimulation.textContent = "Resuming...";
         pauseResumeSimulation.disabled = true;
-        setThemeColor(pauseResumeSimulation, "info")
+        setThemeColor(pauseResumeSimulation, "info");
         break;
       default:
         throw new Error(`Unknown simulation state: ${state}`);
     }
   }
+  
 
   const simulation = new Simulation(updateUIForSimulationState);
 
