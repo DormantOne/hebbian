@@ -181,11 +181,11 @@ ${Object.entries(params)
     } else if (this.state === 'stopping') {
       this.state = 'stopped';
       this.__updateUIForSimulationState();
-      return;
+      
     } else if (this.state === 'pausing') {
       this.state = 'paused';
       this.__updateUIForSimulationState();
-      return;
+      
     }
   }
 
@@ -304,7 +304,6 @@ ${Object.entries(params)
   __checkCollisions() {
     for (const icicle of this.icicles) {
       if (SAT.testPolygonCircle(icicle.polygon, this.player.circle)) {
-        console.log(icicle.polygon.pos,icicle.polygon)
         this.__handleCollision();
         break;
       }
@@ -342,7 +341,7 @@ ${Object.entries(params)
     // Draw icicles
     this.icicles.forEach((icicle) => icicle.draw(ctx));
 
-    this.__drawCollisionShapes()
+    // this.__drawCollisionShapes()
 
   }
 
@@ -390,6 +389,7 @@ ${Object.entries(params)
   __resume() {
     this.state = "resuming";
     this.__updateUIForSimulationState();
+    this.lastPerformanceTime = performance.now()
     requestAnimationFrame(this.__processFrame.bind(this));
   }
 
