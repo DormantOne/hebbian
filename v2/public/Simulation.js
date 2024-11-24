@@ -1,5 +1,5 @@
 import Icicle from "./game/Icicle.js";
-import { METER_TO_PIXEL } from './constants.js';
+import { METER_TO_PIXEL } from "./constants.js";
 import SimulationError from "./SimulationError.js";
 import {
   getNearestLabelContents,
@@ -8,11 +8,13 @@ import {
 } from "./ui/parameter-input.js";
 import { formatBulletedListEntry } from "./text.js";
 import DebugConsole from "./ui/DebugConsole.js";
+import getRayPolygonIntersection from "./geo/getRayPolygonIntersection.js";
 
 export default class Simulation {
   constructor(updateUIForSimulationState) {
     this.updateUIForSimulationState = updateUIForSimulationState;
     this.state = "stopped";
+    this.sensorDistances = []; // Array to store detected distances
   }
 
   getState() {
@@ -36,6 +38,11 @@ export default class Simulation {
         "icicleAverageSpawnRate",
         "playerRadius",
         "playerMovementSpeed",
+
+        // network Parameters,
+        "numSensorRays",
+        "sensorFOV",
+        "sensorMaxDistance",
       ].map((id) => {
         return [id, getNumberParamById(id, paramErrorMessages)];
       })
@@ -50,7 +57,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     }
 
     if (controlledBy !== "human" && controlledBy !== "ai") {
-      throw new SimulationError("Invalid control selection. Choose 'Human' or 'AI'.");
+      throw new SimulationError(
+        "Invalid control selection. Choose 'Human' or 'AI'."
+      );
     }
 
     DebugConsole.info(`
@@ -77,6 +86,8 @@ ${Object.entries(params)
     this.ctx = ctx;
     this.params = params;
 
+    this.sensorDistances = new Array(params.numSensorRays).fill(NaN);
+
     // Bind the canvas resize function to the instance
     this.sizeAndClearCanvas = this.__sizeAndClearCanvas.bind(this);
     this.sizeAndClearCanvas();
@@ -91,10 +102,7 @@ ${Object.entries(params)
       speed: params.playerMovementSpeed, // Meters per second
       // Create a SAT.js Circle for collision detection
       circle: new SAT.Circle(
-        new SAT.Vector(
-          params.playfieldWidth / 2,
-          params.playfieldHeight
-        ),
+        new SAT.Vector(params.playfieldWidth / 2, params.playfieldHeight),
         params.playerRadius
       ),
     };
@@ -107,11 +115,11 @@ ${Object.entries(params)
     this.totalElapsedTime = 0;
 
     // For now, we only implement human control
-    if (controlledBy === 'human') {
+    if (controlledBy === "human") {
       this.__addPlayerInputListeners();
-    } else if (controlledBy === 'ai') {
+    } else if (controlledBy === "ai") {
       // Placeholder for AI control
-      DebugConsole.info('AI control is not implemented yet.');
+      DebugConsole.info("AI control is not implemented yet.");
     }
 
     this.controlledBy = controlledBy;
@@ -142,10 +150,10 @@ ${Object.entries(params)
     if (playfieldAspect >= gameCanvasContainerAspect) {
       gameCanvas.style.width = gameCanvasContainer.clientWidth - 8 + "px";
       gameCanvas.style.height =
-        (gameCanvasContainer.clientWidth / playfieldAspect) - 8 + "px";
+        gameCanvasContainer.clientWidth / playfieldAspect - 8 + "px";
     } else {
       gameCanvas.style.width =
-        (gameCanvasContainer.clientHeight * playfieldAspect) - 8 + "px";
+        gameCanvasContainer.clientHeight * playfieldAspect - 8 + "px";
       gameCanvas.style.height = gameCanvasContainer.clientHeight - 8 + "px";
     }
 
@@ -155,8 +163,8 @@ ${Object.entries(params)
   }
 
   __processFrame() {
-    if (this.state === 'starting' || this.state === 'resuming') {
-      this.state = 'running';
+    if (this.state === "starting" || this.state === "resuming") {
+      this.state = "running";
       this.__updateUIForSimulationState();
     }
 
@@ -165,7 +173,7 @@ ${Object.entries(params)
     this.lastPerformanceTime = currentPerformanceTime;
     const deltaTime = deltaTimeMillis / 1000;
 
-    if (this.state === 'running') {
+    if (this.state === "running") {
       // Update game logic
       this.__updateGame(deltaTime);
       // Render the game
@@ -173,27 +181,25 @@ ${Object.entries(params)
     }
 
     if (
-      this.state === 'running' ||
-      this.state === 'starting' ||
-      this.state === 'resuming'
+      this.state === "running" ||
+      this.state === "starting" ||
+      this.state === "resuming"
     ) {
       requestAnimationFrame(this.__processFrame.bind(this));
-    } else if (this.state === 'stopping') {
-      this.state = 'stopped';
+    } else if (this.state === "stopping") {
+      this.state = "stopped";
       this.__updateUIForSimulationState();
-      
-    } else if (this.state === 'pausing') {
-      this.state = 'paused';
+    } else if (this.state === "pausing") {
+      this.state = "paused";
       this.__updateUIForSimulationState();
-      
     }
   }
 
   __updateGame(deltaTime) {
     // Update player position
-    if (this.controlledBy === 'human') {
+    if (this.controlledBy === "human") {
       this.__updatePlayerPosition(deltaTime);
-    } else if (this.controlledBy === 'ai') {
+    } else if (this.controlledBy === "ai") {
       // AI control is not implemented yet
     }
 
@@ -219,16 +225,18 @@ ${Object.entries(params)
 
     // Check for collisions
     this.__checkCollisions();
+
+    this.__updateSensors();
   }
 
   __updatePlayerPosition(deltaTime) {
     const speed = this.player.speed;
     let dx = 0;
 
-    if (this.keyState['ArrowLeft'] || this.keyState['KeyA']) {
+    if (this.keyState["ArrowLeft"] || this.keyState["KeyA"]) {
       dx -= speed * deltaTime;
     }
-    if (this.keyState['ArrowRight'] || this.keyState['KeyD']) {
+    if (this.keyState["ArrowRight"] || this.keyState["KeyD"]) {
       dx += speed * deltaTime;
     }
 
@@ -243,26 +251,109 @@ ${Object.entries(params)
     if (this.player.x > maxX) this.player.x = maxX;
   }
 
+  __updateSensors() {
+    const { player, icicles, params } = this;
+    const maxDistance = params.sensorMaxDistance;
+
+    const sensorRays = [];
+    const numRays = params.numSensorRays;
+    const fov = (params.sensorFOV * Math.PI) / 180; // Convert FOV to radians
+    const startAngle = Math.PI / 2 - fov / 2;
+    const angleIncrement = fov / (numRays - 1);
+
+    // Create sensor rays
+    for (let i = 0; i < numRays; i++) {
+      const angle = startAngle + i * angleIncrement;
+      const rayStart = new SAT.Vector(player.x, player.y);
+      const rayEnd = new SAT.Vector(
+        player.x + maxDistance * Math.cos(angle),
+        player.y - maxDistance * Math.sin(angle)
+      );
+      sensorRays.push({ start: rayStart, end: rayEnd });
+    }
+
+    // Detect distances
+    const sensorDistances = sensorRays.map((ray) => {
+      let minDistance = maxDistance;
+
+      // Check intersections with icicles
+      for (const icicle of icicles) {
+        const distance = getRayPolygonIntersection(ray, icicle.polygon);
+        if (distance !== null && distance < minDistance) {
+          minDistance = distance;
+        }
+      }
+
+      // Check intersections with walls (hardcoded as rectangular boundaries)
+      const playfieldWalls = [
+        // Top wall
+        {
+          start: new SAT.Vector(0, 0),
+          end: new SAT.Vector(params.playfieldWidth, 0),
+        },
+        // Bottom wall
+        // {
+        //   start: new SAT.Vector(0, params.playfieldHeight),
+        //   end: new SAT.Vector(params.playfieldWidth, params.playfieldHeight),
+        // },
+        // Left wall
+        {
+          start: new SAT.Vector(0, 0),
+          end: new SAT.Vector(0, params.playfieldHeight),
+        },
+        // Right wall
+        {
+          start: new SAT.Vector(params.playfieldWidth, 0),
+          end: new SAT.Vector(params.playfieldWidth, params.playfieldHeight),
+        },
+      ];
+
+      for (const wall of playfieldWalls) {
+        const intersection = SAT.testSegmentSegment(
+          ray.start.x,
+          ray.start.y,
+          ray.end.x,
+          ray.end.y,
+          wall.start.x,
+          wall.start.y,
+          wall.end.x,
+          wall.end.y
+        );
+
+        if (intersection) {
+          const distance = ray.start.distanceTo(intersection);
+
+          if (distance < minDistance) {
+            minDistance = distance;
+          }
+        }
+      }
+      return minDistance;
+    });
+
+    this.sensorDistances = sensorDistances;
+  }
+
   __spawnIcicle() {
     const { icicleWidth, icicleHeight, playfieldWidth } = this.params;
 
     const width = icicleWidth;
     const height = icicleHeight;
-  
+
     // Random x-position for the icicle within the playfield
     const x = Math.random() * (playfieldWidth - width);
     const y = -height; // Start above the playfield
-  
+
     const icicle = new Icicle(x, y, width, height, 0);
-  
+
     this.icicles.push(icicle);
   }
 
   __drawCollisionShapes() {
     const ctx = this.ctx;
-  
+
     // Draw player's collision circle
-    ctx.strokeStyle = 'lime'; // Use a bright color for visibility
+    ctx.strokeStyle = "lime"; // Use a bright color for visibility
     ctx.lineWidth = 18;
     ctx.beginPath();
     ctx.arc(
@@ -273,9 +364,9 @@ ${Object.entries(params)
       Math.PI * 2
     );
     ctx.stroke();
-  
+
     // Draw icicles' collision polygons
-    ctx.strokeStyle = 'magenta'; // Another bright color
+    ctx.strokeStyle = "magenta"; // Another bright color
     this.icicles.forEach((icicle) => {
       ctx.beginPath();
       const points = icicle.polygon.calcPoints;
@@ -304,10 +395,11 @@ ${Object.entries(params)
   }
 
   __handleCollision() {
-    DebugConsole.info('Collision detected! Game Over.');
+    DebugConsole.info("Collision detected! Game Over.");
     // Stop the simulation on collision
     this.__stop();
   }
+
 
   __renderGame() {
     const ctx = this.ctx;
@@ -320,7 +412,7 @@ ${Object.entries(params)
     ctx.clearRect(0, 0, playfieldWidth, playfieldHeight);
 
     // Draw the player
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = "red";
     ctx.beginPath();
     ctx.arc(
       this.player.x * METER_TO_PIXEL,
@@ -336,7 +428,45 @@ ${Object.entries(params)
 
     // this.__drawCollisionShapes()
 
+    this.__renderSensors(ctx);
   }
+
+  __renderSensors(ctx) {
+    const playerPos = new SAT.Vector(this.player.x, this.player.y);
+    const numSensorRays = this.params.numSensorRays;
+    const sensorFOV = this.params.sensorFOV;
+  
+    // Begin drawing the triangle fan
+    ctx.fillStyle = "rgba(180, 180, 180, 0.5)"; // Faint grayish color for maximum range
+    ctx.beginPath();
+  
+    // Start at the player's position (center of the triangle fan)
+    ctx.moveTo(playerPos.x * METER_TO_PIXEL, playerPos.y * METER_TO_PIXEL);
+  
+    // Loop through the sensor rays
+    for (let i = 0; i < numSensorRays; i++) {
+      const angle =
+        Math.PI / 2 + // Adjust orientation to ensure correct alignment
+        (-sensorFOV / 2 + (i * sensorFOV) / (numSensorRays - 1)) * (Math.PI / 180);
+  
+      const distance = this.sensorDistances[i]
+
+      const endX = playerPos.x + distance * Math.cos(angle);
+      const endY = playerPos.y - distance * Math.sin(angle);
+  
+      // Draw a line to the current ray's endpoint
+      ctx.lineTo(endX * METER_TO_PIXEL, endY * METER_TO_PIXEL);
+    }
+  
+    // Close the triangle fan by connecting the last ray to the center
+    ctx.closePath();
+  
+    // Fill the triangle fan
+    ctx.fill();
+  
+  
+  }
+  
 
   __addPlayerInputListeners() {
     this.keyState = {};
@@ -349,8 +479,8 @@ ${Object.entries(params)
       this.keyState[e.code] = false;
     };
 
-    window.addEventListener('keydown', keyDownHandler);
-    window.addEventListener('keyup', keyUpHandler);
+    window.addEventListener("keydown", keyDownHandler);
+    window.addEventListener("keyup", keyUpHandler);
 
     // Store the handlers to remove them later
     this.keyDownHandler = keyDownHandler;
@@ -358,15 +488,15 @@ ${Object.entries(params)
   }
 
   __removePlayerInputListeners() {
-    window.removeEventListener('keydown', this.keyDownHandler);
-    window.removeEventListener('keyup', this.keyUpHandler);
+    window.removeEventListener("keydown", this.keyDownHandler);
+    window.removeEventListener("keyup", this.keyUpHandler);
   }
 
   __stop() {
     this.state = "stopping";
     this.__updateUIForSimulationState();
 
-    if (this.controlledBy === 'human') {
+    if (this.controlledBy === "human") {
       this.__removePlayerInputListeners();
     }
 
@@ -382,7 +512,7 @@ ${Object.entries(params)
   __resume() {
     this.state = "resuming";
     this.__updateUIForSimulationState();
-    this.lastPerformanceTime = performance.now()
+    this.lastPerformanceTime = performance.now();
     requestAnimationFrame(this.__processFrame.bind(this));
   }
 
