@@ -253,16 +253,9 @@ ${Object.entries(params)
     const x = Math.random() * (playfieldWidth - width);
     const y = -height; // Start above the playfield
   
-    const speed = this.__getIcicleSpeed();
-  
-    const icicle = new Icicle(x, y, width, height, speed);
+    const icicle = new Icicle(x, y, width, height, 0);
   
     this.icicles.push(icicle);
-  }
-
-  __getIcicleSpeed() {
-    // Adjust the speed as needed, in meters per second
-    return 5; // For example, 5 meters per second
   }
 
   __drawCollisionShapes() {
