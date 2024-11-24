@@ -21,6 +21,11 @@ export default class Icicle {
   }
 
   update(deltaTime) {
+
+    // apply gravitational acceleration
+    this.speed += deltaTime * 9.8
+
+
     // Move the icicle downwards
     const dy = this.speed * deltaTime; // Meters
     this.position.y += dy;
