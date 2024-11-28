@@ -28,3 +28,21 @@ export function formatBulletedListEntry(text) {
     // Join the lines back together
     return formattedLines.join('\n');
 }
+
+/**
+ * Capitalizes the first letter of a string.
+ * @param {string} str - The input string to capitalize.
+ * @returns {string} The input string with its first letter capitalized.
+ * @throws {TypeError} If the input is not a string.
+ */
+export function capitalizeFirstLetter(str) {
+    if (typeof str !== 'string') {
+        throw new TypeError('Input must be a string');
+    }
+
+    if (str.length === 0) {
+        return str;
+    }
+
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}

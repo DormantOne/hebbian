@@ -2,6 +2,7 @@ import TabView from "./ui/TabView.js";
 import DebugConsole from "./ui/DebugConsole.js";
 import Simulation from "./Simulation.js";
 import { constrainElementFractionOfWindowSize } from "./ui/layout.js";
+import { capitalizeFirstLetter } from "./text.js";
 
 window.onload = () => {
   new TabView("parameterTabContainer", 0)
@@ -54,22 +55,61 @@ window.onload = () => {
 
   constrainElementFractionOfWindowSize(document.querySelector(".DebugConsole"));
 
+  function getPrettyMetric(value) {
+    if (value === null) {
+      return "N/A";
+    }
+    if(typeof value === "string") {
+      return capitalizeFirstLetter(value);
+    }
+    if (typeof value === "number") {
+      return value.toString()
+    }
+    if (Array.isArray(value)) {
+      return value.map(getPrettyMetric).join("\n");
+    }
+    return value.toString();
+  }
+
+  window.prettyUpdateMetric = function (id, value){
+    const element = document.getElementById(id);
+    if(typeof value === "object" && value!==null){
+      if(value.widget==="fraction-bar"){ 
+        const barContainerDiv = document.createElement("div");
+        barContainerDiv.style.width = "100%";
+        barContainerDiv.style.height = "1em";
+        barContainerDiv.style.border = "2px solid black";
+        barContainerDiv.style.position = "relative";
+        const barDiv = document.createElement("div");
+        barDiv.style.width = `${value.value * 100}%`;
+        barDiv.style.position = "absolute";
+        barDiv.style.height = "100%";
+        barDiv.style.background = value.getColor? value.getColor(value.value) : "grey";
+        barContainerDiv.appendChild(barDiv);
+        element.innerHTML = "";
+        element.appendChild(barContainerDiv);
+      }
+    }else{
+      element.textContent = getPrettyMetric(value)
+    }
+  }
+
   function updateUIForSimulationState(state) {
     function setThemeColor(element, themeColor) {
       // Get the class list of the element
       const classList = element.classList;
-  
+
       // Remove any existing classes with the 'theme-' prefix
       classList.forEach((className) => {
         if (className.startsWith("theme-")) {
           classList.remove(className);
         }
       });
-  
+
       // Add the new class with the 'theme-' prefix according to themeColor
       classList.add(`theme-${themeColor}`);
     }
-  
+
     function clearThemeColor(element) {
       const classList = element.classList;
       classList.forEach((className) => {
@@ -78,7 +118,7 @@ window.onload = () => {
         }
       });
     }
-  
+
     // Enable/disable human vs AI radio buttons based on the simulation state
     const radioButtons = document.querySelectorAll(
       'input[name="controlledBy"]'
@@ -87,9 +127,10 @@ window.onload = () => {
     radioButtons.forEach((button) => {
       button.disabled = !enableRadioButtons;
     });
-  
+
     // Update UI elements based on the simulation state
-    document.getElementById("currentSimulationState").textContent = state;
+    window.prettyUpdateMetric("simulationState", state);
+
     switch (state) {
       case "running":
         startStopSimulation.textContent = "Stop";
@@ -151,7 +192,6 @@ window.onload = () => {
         throw new Error(`Unknown simulation state: ${state}`);
     }
   }
-  
 
   const simulation = new Simulation(updateUIForSimulationState);
 

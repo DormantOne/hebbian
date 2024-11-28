@@ -430,9 +430,24 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
       <div class="Panel Panel5">
         <h1 class="PanelTitle">Monitor &amp; Metrics</h1>
         <div class="MonitorAndMetricsContainer">
-          <h1 class="SimulationIs">
-            Simulation is <span id="currentSimulationState">stopped</span>.
-          </h1>
+          <table class="MetricsTable">
+            <thead class="MetricsTableHead">
+              <tr>
+                <th>Metric / State</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody class="MetricsTableBody">
+              <tr>
+                <td>Simulation State</td>
+                <td id="simulationState">Stopped</td>
+              </tr>
+              <tr>
+                <td>Threat Ray Count</td>
+                <td id="threatRayCount">...</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 

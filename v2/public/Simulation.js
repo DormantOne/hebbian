@@ -10,11 +10,24 @@ import { formatBulletedListEntry } from "./text.js";
 import DebugConsole from "./ui/DebugConsole.js";
 import getRayPolygonIntersection from "./geo/getRayPolygonIntersection.js";
 
+/**
+ * Enum for sensor kinds.
+ * Represents the type of object detected by a sensor.
+ *
+ * @enum {number}
+ */
+const SensorDetectionKind = Object.freeze({
+  WALL: 0,
+  ICICLE: 1,
+});
+
 export default class Simulation {
   constructor(updateUIForSimulationState) {
     this.updateUIForSimulationState = updateUIForSimulationState;
     this.state = "stopped";
     this.sensorDistances = []; // Array to store detected distances
+    this.sensorDetectionKinds = []; // Array to store detected kinds
+    this.threatRayCount = 0;
   }
 
   getState() {
@@ -39,10 +52,29 @@ export default class Simulation {
         "playerRadius",
         "playerMovementSpeed",
 
-        // network Parameters,
+        // Network Parameters
         "numSensorRays",
         "sensorFOV",
         "sensorMaxDistance",
+        "maxNodes",
+        "maxEdges",
+        "maxAbsoluteNodeValue",
+        "maxAbsoluteEdgeStrength",
+
+        // Learning Parameters
+        "spikeActivationLevel",
+        "spikeDecayTimeConstant",
+        "spikeRefractoryPeriod",
+        "survivalReward",
+        "deathPunishment",
+        "threatBonusProximity",
+        "fitnessDecayRatio",
+        "hebbianReinforcementTimeConstant",
+        "hebbianStrengthFactor",
+        "nodeInactiveLifetime",
+        "edgeInactiveLifetime",
+        "nodeSpawnRate",
+        "edgeSpawnRate",
       ].map((id) => {
         return [id, getNumberParamById(id, paramErrorMessages)];
       })
@@ -86,7 +118,8 @@ ${Object.entries(params)
     this.ctx = ctx;
     this.params = params;
 
-    this.sensorDistances = new Array(params.numSensorRays).fill(NaN);
+    this.sensorDistances = new Array(params.numSensorRays).fill(null);
+    this.sensorDetectionKinds = new Array(params.numSensorRays).fill(null);
 
     // Bind the canvas resize function to the instance
     this.sizeAndClearCanvas = this.__sizeAndClearCanvas.bind(this);
@@ -113,6 +146,8 @@ ${Object.entries(params)
     // Initialize time tracking variables
     this.lastPerformanceTime = performance.now();
     this.totalElapsedTime = 0;
+
+    this.threatRayCount = 0;
 
     // For now, we only implement human control
     if (controlledBy === "human") {
@@ -227,6 +262,8 @@ ${Object.entries(params)
     this.__checkCollisions();
 
     this.__updateSensors();
+
+    this.__updateThreatRayCount();
   }
 
   __updatePlayerPosition(deltaTime) {
@@ -261,7 +298,6 @@ ${Object.entries(params)
     const startAngle = Math.PI / 2 - fov / 2;
     const angleIncrement = fov / (numRays - 1);
 
-    // Create sensor rays
     for (let i = 0; i < numRays; i++) {
       const angle = startAngle + i * angleIncrement;
       const rayStart = new SAT.Vector(player.x, player.y);
@@ -272,36 +308,20 @@ ${Object.entries(params)
       sensorRays.push({ start: rayStart, end: rayEnd });
     }
 
-    // Detect distances
-    const sensorDistances = sensorRays.map((ray) => {
+    sensorRays.forEach((ray, rayIndex) => {
       let minDistance = maxDistance;
+      this.sensorDetectionKinds[rayIndex] = null;
 
-      // Check intersections with icicles
-      for (const icicle of icicles) {
-        const distance = getRayPolygonIntersection(ray, icicle.polygon);
-        if (distance !== null && distance < minDistance) {
-          minDistance = distance;
-        }
-      }
-
-      // Check intersections with walls (hardcoded as rectangular boundaries)
       const playfieldWalls = [
-        // Top wall
         {
           start: new SAT.Vector(0, 0),
           end: new SAT.Vector(params.playfieldWidth, 0),
         },
-        // Bottom wall
-        // {
-        //   start: new SAT.Vector(0, params.playfieldHeight),
-        //   end: new SAT.Vector(params.playfieldWidth, params.playfieldHeight),
-        // },
-        // Left wall
         {
           start: new SAT.Vector(0, 0),
           end: new SAT.Vector(0, params.playfieldHeight),
         },
-        // Right wall
+
         {
           start: new SAT.Vector(params.playfieldWidth, 0),
           end: new SAT.Vector(params.playfieldWidth, params.playfieldHeight),
@@ -322,16 +342,28 @@ ${Object.entries(params)
 
         if (intersection) {
           const distance = ray.start.distanceTo(intersection);
-
           if (distance < minDistance) {
+            minDistance = distance;
+            this.sensorDetectionKinds[rayIndex] = null;
+
+          }
+        }
+      }
+
+      for (const icicle of icicles) {
+        const distance = getRayPolygonIntersection(ray, icicle.polygon);
+        if (distance !== null) {
+          if (distance < minDistance) {
+            this.sensorDetectionKinds[rayIndex] = SensorDetectionKind.ICICLE;
             minDistance = distance;
           }
         }
       }
-      return minDistance;
+
+      this.sensorDistances[rayIndex] = minDistance;
+
     });
 
-    this.sensorDistances = sensorDistances;
   }
 
   __spawnIcicle() {
@@ -394,12 +426,46 @@ ${Object.entries(params)
     }
   }
 
-  __handleCollision() {
-    DebugConsole.info("Collision detected! Game Over.");
-    // Stop the simulation on collision
-    this.__stop();
+  __resetGame() {
+    // Reset player position
+    this.player.x = this.params.playfieldWidth / 2;
+    this.player.y = this.params.playfieldHeight;
+    this.player.circle.pos.x = this.player.x;
+    this.player.circle.pos.y = this.player.y;
+  
+    // Clear all icicles
+    this.icicles = [];
+  
+    // Reset last time (but keep totalElapsedTime)
+    this.lastPerformanceTime = performance.now();
+  
+    // Reset icicle spawn timer
+    this.lastIcicleSpawnTime = 0;
+  
+    // Reset sensor data
+    this.sensorDistances = new Array(this.params.numSensorRays).fill(null);
+    this.sensorDetectionKinds = new Array(this.params.numSensorRays).fill(null);
+  
+    // Reset threat ray count
+    this.threatRayCount = 0;
+  
+    // Update UI metrics
+    window.prettyUpdateMetric("threatRayCount", {
+      widget: "fraction-bar",
+      getColor(value) {
+        const r = 127 + Math.floor((255 - 127) * value);
+        const g = 127;
+        const b = 127;
+        return `rgb(${r}, ${g}, ${b})`;
+      },
+      value: 0,
+    });
+    DebugConsole.info("Died! Respawning...");
   }
 
+  __handleCollision() {
+    this.__resetGame()
+  }
 
   __renderGame() {
     const ctx = this.ctx;
@@ -426,47 +492,93 @@ ${Object.entries(params)
     // Draw icicles
     this.icicles.forEach((icicle) => icicle.draw(ctx));
 
-    // this.__drawCollisionShapes()
-
     this.__renderSensors(ctx);
+  }
+
+  __updateThreatRayCount() {
+    let total = 0;
+    for (let i = 0; i < this.params.numSensorRays; i++) {
+      const distance = this.sensorDistances[i];
+      const isThreat =
+        this.sensorDetectionKinds[i] === SensorDetectionKind.ICICLE &&
+        distance / this.params.sensorMaxDistance <
+          this.params.threatBonusProximity;
+      if (isThreat) {
+        total += 1;
+      }
+    }
+    this.threatRayCount = total;
+    window.prettyUpdateMetric("threatRayCount", {
+      widget: "fraction-bar",
+      getColor(value) {
+        const r = 127 + Math.floor((255 - 127) * value);
+        const g = 127;
+        const b = 127;
+        return `rgb(${r}, ${g}, ${b})`;
+      },
+      value: this.threatRayCount / this.params.numSensorRays,
+    });
   }
 
   __renderSensors(ctx) {
     const playerPos = new SAT.Vector(this.player.x, this.player.y);
     const numSensorRays = this.params.numSensorRays;
     const sensorFOV = this.params.sensorFOV;
-  
-    // Begin drawing the triangle fan
-    ctx.fillStyle = "rgba(180, 180, 180, 0.5)"; // Faint grayish color for maximum range
-    ctx.beginPath();
-  
-    // Start at the player's position (center of the triangle fan)
-    ctx.moveTo(playerPos.x * METER_TO_PIXEL, playerPos.y * METER_TO_PIXEL);
-  
-    // Loop through the sensor rays
-    for (let i = 0; i < numSensorRays; i++) {
-      const angle =
-        Math.PI / 2 + // Adjust orientation to ensure correct alignment
-        (-sensorFOV / 2 + (i * sensorFOV) / (numSensorRays - 1)) * (Math.PI / 180);
-  
-      const distance = this.sensorDistances[i]
 
-      const endX = playerPos.x + distance * Math.cos(angle);
-      const endY = playerPos.y - distance * Math.sin(angle);
-  
-      // Draw a line to the current ray's endpoint
-      ctx.lineTo(endX * METER_TO_PIXEL, endY * METER_TO_PIXEL);
+    // Compute the base increment for visual interpolation
+    const angleIncrement = (sensorFOV * Math.PI) / 180 / numSensorRays;
+    const startAngle = Math.PI / 2 - (sensorFOV / 2) * (Math.PI / 180);
+
+    // Loop through each ray and draw a triangle for its visualization
+    for (let i = 0; i < numSensorRays; i++) {
+      // Compute the center angle for the current ray
+      const sensorAngle = startAngle + i * angleIncrement;
+
+      // Visual triangle angles (left and right of the ray)
+      const visLeftAngle = sensorAngle - angleIncrement / 2;
+      const visRightAngle = sensorAngle + angleIncrement / 2;
+
+      // Use the distance measurement for this ray
+      const distance = this.sensorDistances[i] || this.params.sensorMaxDistance;
+
+      // Apply the Pythagorean adjustment to the distance for the visual points
+      const scaleFactor = Math.cos(angleIncrement / 2); // Adjust for angle offset
+      const adjustedDistance = distance * scaleFactor;
+
+      // Points for the triangle (player, left point, right point)
+      const visLeftPoint = {
+        x: playerPos.x + adjustedDistance * Math.cos(visLeftAngle),
+        y: playerPos.y - adjustedDistance * Math.sin(visLeftAngle),
+      };
+
+      const visRightPoint = {
+        x: playerPos.x + adjustedDistance * Math.cos(visRightAngle),
+        y: playerPos.y - adjustedDistance * Math.sin(visRightAngle),
+      };
+
+      const isThreat =
+        this.sensorDetectionKinds[i] === SensorDetectionKind.ICICLE &&
+        distance / this.params.sensorMaxDistance <
+          this.params.threatBonusProximity;
+
+      // Draw the triangle
+      ctx.fillStyle = isThreat
+        ? "rgba(180, 0, 0, 0.5)"
+        : "rgba(180, 180, 180, 0.5)";
+      ctx.beginPath();
+      ctx.moveTo(playerPos.x * METER_TO_PIXEL, playerPos.y * METER_TO_PIXEL); // Player position
+      ctx.lineTo(
+        visLeftPoint.x * METER_TO_PIXEL,
+        visLeftPoint.y * METER_TO_PIXEL
+      );
+      ctx.lineTo(
+        visRightPoint.x * METER_TO_PIXEL,
+        visRightPoint.y * METER_TO_PIXEL
+      );
+      ctx.closePath();
+      ctx.fill();
     }
-  
-    // Close the triangle fan by connecting the last ray to the center
-    ctx.closePath();
-  
-    // Fill the triangle fan
-    ctx.fill();
-  
-  
   }
-  
 
   __addPlayerInputListeners() {
     this.keyState = {};
