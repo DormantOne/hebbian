@@ -345,6 +345,21 @@ border: 4px solid black;
 background-color: rgb(210, 210, 230);
 }
 
+.VisCanvasContainer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(195, 208, 210);
+  }
+  
+.VisCanvas {
+border: 4px solid black;
+background-color: rgb(210, 210, 230);
+}
+
 .MonitorAndMetricsContainer {
 width: 100%;
 height: 100%;
@@ -403,4 +418,9 @@ gap: 0.5rem;
   font-family: monospace;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.ParameterControl input:disabled{
+  opacity: 60%;
+  cursor: not-allowed;
 }

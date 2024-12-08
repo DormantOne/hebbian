@@ -1,8 +1,8 @@
-import TabView from "./ui/TabView.js";
-import DebugConsole from "./ui/DebugConsole.js";
-import Simulation from "./Simulation.js";
-import { constrainElementFractionOfWindowSize } from "./ui/layout.js";
-import { capitalizeFirstLetter } from "./text.js";
+import TabView from "../ui/TabView.js";
+import DebugConsole from "../ui/DebugConsole.js";
+import Simulation from "../simulation/Simulation.js";
+import { constrainElementFractionOfWindowSize } from "../ui/layout.js";
+import { capitalizeFirstLetter } from "../utils/text.js";
 
 window.onload = () => {
   new TabView("parameterTabContainer", 0)
@@ -127,6 +127,17 @@ window.onload = () => {
     radioButtons.forEach((button) => {
       button.disabled = !enableRadioButtons;
     });
+    
+    const allParameterInputs = document.querySelectorAll(".ParameterControl input")
+    if(state==="stopped"){
+      allParameterInputs.forEach((input) => {
+        input.disabled = false;
+      })
+    }else{
+      allParameterInputs.forEach((input) => {
+        input.disabled = true;
+      })
+    }
 
     // Update UI elements based on the simulation state
     window.prettyUpdateMetric("simulationState", state);
@@ -214,4 +225,26 @@ window.onload = () => {
         DebugConsole.reportErrorObject(error);
       }
     });
+
+  const visCanvasContainer = document.querySelector('.VisCanvasContainer');
+  const visCanvas = document.querySelector('.VisCanvas');
+
+  function registerVisCanvas(){
+    const {width, height} = visCanvasContainer.getBoundingClientRect();
+    const smallerOf = Math.min(width, height);
+    visCanvas.width = smallerOf;
+    visCanvas.height = smallerOf;
+    visCanvas.style.width = `${smallerOf}px`;
+    visCanvas.style.height = `${smallerOf}px`;
+    window.visCanvasCtx = visCanvas.getContext('2d');
+    window.visCanvasSize = smallerOf
+  }
+
+  registerVisCanvas()
+  
+  window.addEventListener('resize', () => {
+    registerVisCanvas();
+  })
+
+  visCanvas.style.display = 'block';
 };

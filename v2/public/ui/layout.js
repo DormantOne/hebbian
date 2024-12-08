@@ -11,8 +11,8 @@
  * Initially, I though using display: grid would fix the problem automatically
  * but turns out `1fr` will grow to fit content instead of constraining content
  *
- * To apply detailed constratins in dynamic layouts, we need to use Javascript to
- * measure and apply explict units (px, rem, vw, vh, etc.)
+ * To apply detailed constraints in dynamic layouts, we need to use Javascript to
+ * measure and apply explicit units (px, rem, vw, vh, etc.)
  */
 export function constrainElementFractionOfWindowSize(element) {
   const fractionW = element.clientWidth / window.innerWidth;

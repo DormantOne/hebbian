@@ -108,4 +108,5 @@ export default class TabView {
       this.showTab(0);
     }
   }
+
 }

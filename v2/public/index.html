@@ -3,54 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>Hebbian Neural Network Plays Icicle Dodge Game</title>
-
+    <title>Hebbian V2</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
-
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/sat/0.9.0/SAT.min.js"
       integrity="sha512-I/Whsg25W/NpxpNL5dXAySa7JMz/r0ibfrqaTUTT97m2ggJAYbiioXaqL5hfoXmZ1CsvXaPyLKrwe3sSem20/A=="
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     ></script>
-
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
       integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+"
       crossorigin="anonymous"
     />
-
     <script
       defer
       src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
       integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg"
       crossorigin="anonymous"
     ></script>
-
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css"
     />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
-
-    <link rel="stylesheet" href="utils.css" />
-    <link rel="stylesheet" href="theme.css" />
-    <link rel="stylesheet" href="index.css" />
-
-    <script defer src="ui/TabView.js" type="module"></script>
-
-    <script defer src="augmentSAT.js" type="module"></script>
-    <script defer src="index.js" type="module"></script>
-    <script defer src="Simulation.js" type="module"></script>
-    <script defer src="SimulationError.js" type="module"></script>
-    <script defer src="ui/parameter-input.js" type="module"></script>
-    <script defer src="ui/layout.js" type="module"></script>
-    <script defer src="text.js" type="module"></script>
-    <script defer src="geo/getRayPolygonIntersection.js" type="module"></script>
+    <link rel="stylesheet" href="styles/utils.css" />
+    <link rel="stylesheet" href="themes/default.css" />
+    <link rel="stylesheet" href="styles/index.css" />
+    <script defer src="setup/augmentSAT.js" type="module"></script>
+    <script defer src="setup/index.js" type="module"></script>
   </head>
 
   <body>
@@ -413,6 +396,14 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
 
       <div class="Panel Panel2">
         <h1 class="PanelTitle">Visualization</h1>
+        <div class="VisCanvasContainer">
+          <canvas
+            class="VisCanvas"
+            width="0"
+            height="0"
+            style="display: none; width: 100%; height: 100%"
+          ></canvas>
+        </div>
       </div>
 
       <div class="Panel Panel3">

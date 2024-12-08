@@ -1,6 +1,6 @@
 // Icicle.js
 
-import { METER_TO_PIXEL } from '../constants.js';
+import { METER_TO_PIXEL } from './constants.js';
 
 export default class Icicle {
   constructor(x, y, width, height, speed) {

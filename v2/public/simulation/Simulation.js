@@ -1,14 +1,49 @@
-import Icicle from "./game/Icicle.js";
-import { METER_TO_PIXEL } from "./constants.js";
+import Icicle from "../game/Icicle.js";
+import { METER_TO_PIXEL } from "../game/constants.js";
 import SimulationError from "./SimulationError.js";
 import {
   getNearestLabelContents,
   getNumberParamById,
   getStringRadioByName,
-} from "./ui/parameter-input.js";
-import { formatBulletedListEntry } from "./text.js";
-import DebugConsole from "./ui/DebugConsole.js";
-import getRayPolygonIntersection from "./geo/getRayPolygonIntersection.js";
+} from "../ui/parameter-input.js";
+import { formatBulletedListEntry } from "../utils/text.js";
+import DebugConsole from "../ui/DebugConsole.js";
+import getRayPolygonIntersection from "../geo/getRayPolygonIntersection.js";
+import NetworkNode, { NetworkNodeRole } from "./NetworkNode.js";
+import DynamicScale from "../math/DynamicScale.js";
+import { DYNAMIC_SCALE_CUTOFF } from "../visualization/constants.js";
+import { getVisCanvasSize, getVisCtx } from "../visualization/coordinates.js";
+
+/**
+ * @typedef {Object} SimulationParams
+ * @property {number} playfieldWidth - Width of the playfield
+ * @property {number} playfieldHeight - Height of the playfield
+ * @property {number} icicleWidth - Width of icicles
+ * @property {number} icicleHeight - Height of icicles
+ * @property {number} icicleAverageSpawnRate - Average spawn rate of icicles
+ * @property {number} playerRadius - Radius of the player
+ * @property {number} playerMovementSpeed - Movement speed of the player
+ * @property {number} numSensorRays - Number of sensor rays
+ * @property {number} sensorFOV - Field of view for sensors
+ * @property {number} sensorMaxDistance - Maximum distance for sensors
+ * @property {number} maxNodes - Maximum number of nodes
+ * @property {number} maxEdges - Maximum number of edges
+ * @property {number} maxAbsoluteNodeValue - Maximum absolute value for nodes
+ * @property {number} maxAbsoluteEdgeStrength - Maximum absolute strength for edges
+ * @property {number} spikeActivationLevel - Activation level for spikes
+ * @property {number} spikeDecayTimeConstant - Time constant for spike decay
+ * @property {number} spikeRefractoryPeriod - Refractory period for spikes
+ * @property {number} survivalReward - Reward for survival
+ * @property {number} deathPunishment - Punishment for death
+ * @property {number} threatBonusProximity - Proximity bonus for threats
+ * @property {number} fitnessDecayRatio - Decay ratio for fitness
+ * @property {number} hebbianReinforcementTimeConstant - Time constant for Hebbian reinforcement
+ * @property {number} hebbianStrengthFactor - Strength factor for Hebbian learning
+ * @property {number} nodeInactiveLifetime - Lifetime for inactive nodes
+ * @property {number} edgeInactiveLifetime - Lifetime for inactive edges
+ * @property {number} nodeSpawnRate - Spawn rate for nodes
+ * @property {number} edgeSpawnRate - Spawn rate for edges
+ */
 
 /**
  * Enum for sensor kinds.
@@ -27,7 +62,9 @@ export default class Simulation {
     this.state = "stopped";
     this.sensorDistances = []; // Array to store detected distances
     this.sensorDetectionKinds = []; // Array to store detected kinds
+    this.sensorNodes = [];
     this.threatRayCount = 0;
+    this.networkNodeValueScale = new DynamicScale(DYNAMIC_SCALE_CUTOFF);
   }
 
   getState() {
@@ -120,6 +157,18 @@ ${Object.entries(params)
 
     this.sensorDistances = new Array(params.numSensorRays).fill(null);
     this.sensorDetectionKinds = new Array(params.numSensorRays).fill(null);
+    this.sensorNodes = [];
+    for (let i = 0; i < params.numSensorRays; i++) {
+      const theta = (Math.PI * (i + 1)) / params.numSensorRays;
+      this.sensorNodes.push(
+        new NetworkNode(
+          NetworkNodeRole.VISUAL,
+          [Math.cos(theta), Math.sin(theta)],
+          this.params,
+          this.networkNodeValueScale
+        )
+      );
+    }
 
     // Bind the canvas resize function to the instance
     this.sizeAndClearCanvas = this.__sizeAndClearCanvas.bind(this);
@@ -213,6 +262,7 @@ ${Object.entries(params)
       this.__updateGame(deltaTime);
       // Render the game
       this.__renderGame();
+      this.__renderVisualization();
     }
 
     if (
@@ -345,7 +395,6 @@ ${Object.entries(params)
           if (distance < minDistance) {
             minDistance = distance;
             this.sensorDetectionKinds[rayIndex] = null;
-
           }
         }
       }
@@ -361,9 +410,16 @@ ${Object.entries(params)
       }
 
       this.sensorDistances[rayIndex] = minDistance;
-
     });
-
+    for (let i = 0; i < this.sensorDistances.length; i++) {
+      const sensorNode = this.sensorNodes[i];
+      const sensorDistance = this.sensorDistances[i];
+      if (typeof sensorDistance === "number" || !isNaN(sensorDistance)) {
+        sensorNode.setValue(1 - sensorDistance / this.params.sensorMaxDistance);
+      } else {
+        sensorNode.setValue(0);
+      }
+    }
   }
 
   __spawnIcicle() {
@@ -432,23 +488,23 @@ ${Object.entries(params)
     this.player.y = this.params.playfieldHeight;
     this.player.circle.pos.x = this.player.x;
     this.player.circle.pos.y = this.player.y;
-  
+
     // Clear all icicles
     this.icicles = [];
-  
+
     // Reset last time (but keep totalElapsedTime)
     this.lastPerformanceTime = performance.now();
-  
+
     // Reset icicle spawn timer
     this.lastIcicleSpawnTime = 0;
-  
+
     // Reset sensor data
     this.sensorDistances = new Array(this.params.numSensorRays).fill(null);
     this.sensorDetectionKinds = new Array(this.params.numSensorRays).fill(null);
-  
+
     // Reset threat ray count
     this.threatRayCount = 0;
-  
+
     // Update UI metrics
     window.prettyUpdateMetric("threatRayCount", {
       widget: "fraction-bar",
@@ -464,7 +520,7 @@ ${Object.entries(params)
   }
 
   __handleCollision() {
-    this.__resetGame()
+    this.__resetGame();
   }
 
   __renderGame() {
@@ -493,6 +549,21 @@ ${Object.entries(params)
     this.icicles.forEach((icicle) => icicle.draw(ctx));
 
     this.__renderSensors(ctx);
+  }
+
+  __renderVisualization() {
+    this.networkNodeValueScale.clear();
+    const allNodeValues = [];
+    this.sensorNodes.forEach((node) => {
+      allNodeValues.push(node.value);
+    });
+    this.networkNodeValueScale.compute(allNodeValues);
+    const ctx = getVisCtx();
+    const ctxSize = getVisCanvasSize();
+    ctx.clearRect(0, 0, ctxSize, ctxSize);
+    this.sensorNodes.forEach((node) => {
+      node.draw();
+    });
   }
 
   __updateThreatRayCount() {
