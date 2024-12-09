@@ -31,12 +31,15 @@ export default class NetworkNode {
    * computed from the values of all neurons
    * in the simulation (including the current)
    */
-  constructor(role, visLoc, simParams, valueScale) {
+  constructor(role, visLoc, simParams, valueScale, options) {
     this.role = role;
     this.visLoc = visLoc;
     this.value = 0;
     this.simParams = simParams;
     this.valueScale = valueScale;
+    this.options = options || {
+      visualScale: 1,
+    };
   }
 
   /**
@@ -50,7 +53,8 @@ export default class NetworkNode {
 
   draw() {
     const ctx = getVisCtx();
-    const radiusPixels = VisCoord.distToPixel(nnVisSettings.radius);
+    const radiusPixels =
+      VisCoord.distToPixel(nnVisSettings.radius) * this.options.visualScale
     const color = this.valueScale.interpolateLevelColor(
       this.value,
       [0, 0, 255],
@@ -60,13 +64,7 @@ export default class NetworkNode {
     const locPixels = VisCoord.pointToPixel(this.visLoc);
 
     ctx.beginPath();
-    ctx.arc(
-      locPixels[0],
-      locPixels[1],
-      radiusPixels,
-      0,
-      Math.PI * 2
-    );
+    ctx.arc(locPixels[0], locPixels[1], radiusPixels, 0, Math.PI * 2);
     ctx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]})`;
     ctx.fill();
     ctx.closePath();

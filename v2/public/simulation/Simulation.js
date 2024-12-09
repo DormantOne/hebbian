@@ -63,6 +63,7 @@ export default class Simulation {
     this.sensorDistances = []; // Array to store detected distances
     this.sensorDetectionKinds = []; // Array to store detected kinds
     this.sensorNodes = [];
+    this.motorNodes = [];
     this.threatRayCount = 0;
     this.networkNodeValueScale = new DynamicScale(DYNAMIC_SCALE_CUTOFF);
   }
@@ -159,16 +160,41 @@ ${Object.entries(params)
     this.sensorDetectionKinds = new Array(params.numSensorRays).fill(null);
     this.sensorNodes = [];
     for (let i = 0; i < params.numSensorRays; i++) {
-      const theta = (Math.PI * (i + 1)) / params.numSensorRays;
+      const theta =
+        Math.PI / 2 +
+        ((-this.params.sensorFOV / 2 +
+          ((i + 1) * this.params.sensorFOV) / params.numSensorRays) *
+          Math.PI) /
+          180;
       this.sensorNodes.push(
         new NetworkNode(
           NetworkNodeRole.VISUAL,
-          [Math.cos(theta), Math.sin(theta)],
+          [Math.cos(theta) * 0.85, Math.sin(theta) * 0.85],
           this.params,
           this.networkNodeValueScale
         )
       );
     }
+    this.motorNodes = [
+      new NetworkNode(
+        NetworkNodeRole.MOVEMENT,
+        [0.85 *Math.cos((90-this.params.sensorFOV/2)*Math.PI/180), 0],
+        this.params,
+        this.networkNodeValueScale,
+        {
+          visualScale: 3,
+        }
+      ),
+      new NetworkNode(
+        NetworkNodeRole.MOVEMENT,
+        [-0.85 *Math.cos((90-this.params.sensorFOV/2)*Math.PI/180), 0],
+        this.params,
+        this.networkNodeValueScale,
+        {
+          visualScale: 3,
+        }
+      ),
+    ];
 
     // Bind the canvas resize function to the instance
     this.sizeAndClearCanvas = this.__sizeAndClearCanvas.bind(this);
@@ -557,11 +583,17 @@ ${Object.entries(params)
     this.sensorNodes.forEach((node) => {
       allNodeValues.push(node.value);
     });
+    this.motorNodes.forEach((node) => {
+      allNodeValues.push(node.value);
+    });
     this.networkNodeValueScale.compute(allNodeValues);
     const ctx = getVisCtx();
     const ctxSize = getVisCanvasSize();
     ctx.clearRect(0, 0, ctxSize, ctxSize);
     this.sensorNodes.forEach((node) => {
+      node.draw();
+    });
+    this.motorNodes.forEach((node) => {
       node.draw();
     });
   }
