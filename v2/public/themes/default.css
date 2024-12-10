@@ -52,3 +52,47 @@
   background-color: #343a40;
   color: #ffffff;
 }
+
+.theme-text-log {
+  color: rgb(230, 230, 230);
+}
+
+.theme-text-danger {
+  color: #dc3545;
+}
+
+.theme-text-error {
+  color: #dc3545;
+}
+
+.theme-text-success {
+  color: #28a745;
+}
+
+.theme-text-info {
+  color: #17a2b8;
+}
+
+.theme-text-warning {
+  color: #ffc107;
+}
+
+.theme-text-primary {
+  color: #007bff;
+}
+
+.theme-text-action {
+  color: #007bff;
+}
+
+.theme-text-secondary {
+  color: #6c757d;
+}
+
+.theme-text-light {
+  color: #f8f9fa;
+}
+
+.theme-text-dark {
+  color: #343a40;
+}

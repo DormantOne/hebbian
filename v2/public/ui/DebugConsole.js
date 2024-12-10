@@ -23,15 +23,14 @@ export default class DebugConsole {
   }
 
   /**
-   * Scrolls the debug console to the bottom with a smooth effect
+   * Scrolls the debug console to the bottom
    */
-  static scrollToBottom() {
+  static scrollToBottomInstant() {
     const debugConsole = DebugConsole.getDebugConsoleElement();
     debugConsole.scrollTo({
       top: debugConsole.scrollHeight,
-      behavior: "smooth",
+      behavior: "instant",
     });
-    // debugConsole.scrollTop = debugConsole.scrollHeight;
   }
 
   /**
@@ -42,7 +41,7 @@ export default class DebugConsole {
     let messages = DebugConsole.getDebugConsoleMessageElements();
     while (messages.length > MAX_LOGS) {
       messages[0].remove();
-      messages = DebugConsole.getDebugConsoleMessageElements()
+      messages = DebugConsole.getDebugConsoleMessageElements();
     }
   }
 
@@ -50,12 +49,15 @@ export default class DebugConsole {
    * Variant is danger, light, dark, info, warning etc
    *
    * It generates a div with whitespace pre-wrap, font family monospace
-   * and adds the class DebugConsoleMessage as well as `theme-${variant}` class
+   * and adds the class DebugConsoleMessage as well as `theme-text-${variant}` class
    */
   static write(variant, message, details) {
     const debugConsole = DebugConsole.getDebugConsoleElement();
     const messageElement = document.createElement("div");
-    messageElement.classList.add("DebugConsoleMessage", `theme-${variant}`);
+    messageElement.classList.add(
+      "DebugConsoleMessage",
+      `theme-text-${variant}`
+    )
 
     if (!details) {
       const messageTextElement = document.createElement("div");
@@ -84,7 +86,7 @@ export default class DebugConsole {
         const detailsElement = document.createElement("details");
         detailsElement.classList.add("DebugConsoleMessageDetails");
         const summaryElement = document.createElement("summary");
-        summaryElement.classList.add("DebugConsoleMessageDetailsKey")
+        summaryElement.classList.add("DebugConsoleMessageDetailsKey");
         summaryElement.textContent = `${key}`;
         detailsElement.appendChild(summaryElement);
         const detailsContentElement = document.createElement("div");
@@ -98,7 +100,7 @@ export default class DebugConsole {
     }
     debugConsole.appendChild(messageElement);
     DebugConsole.clearOld();
-    DebugConsole.scrollToBottom()
+    DebugConsole.scrollToBottomInstant();
   }
 
   static log(message, details) {
@@ -128,8 +130,8 @@ export default class DebugConsole {
         } catch (stringifyError) {
           DebugConsole.error(stringifyError.message, {
             name: "Unstringifiable Error Object",
-            stack: stringifyError.stack||undefined,
-            plainStringValue: error.toString()
+            stack: stringifyError.stack || undefined,
+            plainStringValue: error.toString(),
           });
         }
       }

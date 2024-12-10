@@ -132,16 +132,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       );
     }
 
-    DebugConsole.info(`
-Beginning simulation with the following parameters:
-
-    • Controlled By: ${controlledBy === "human" ? "Human" : "AI"}
-${Object.entries(params)
-  .map(([id, value]) => {
-    return `    • ${getNearestLabelContents(`#${id}`)}: ${value}`;
-  })
-  .join("\n")}
-                  `);
+    DebugConsole.info('Beginning simulation...');
 
     this.state = "starting";
     this.__updateUIForSimulationState();
@@ -229,7 +220,7 @@ ${Object.entries(params)
       this.__addPlayerInputListeners();
     } else if (controlledBy === "ai") {
       // Placeholder for AI control
-      DebugConsole.info("AI control is not implemented yet.");
+      // DebugConsole.info("AI control is not implemented yet.");
     }
 
     this.controlledBy = controlledBy;
@@ -307,12 +298,9 @@ ${Object.entries(params)
   }
 
   __updateGame(deltaTime) {
-    // Update player position
-    if (this.controlledBy === "human") {
-      this.__updatePlayerPosition(deltaTime);
-    } else if (this.controlledBy === "ai") {
-      // AI control is not implemented yet
-    }
+
+    // Update player position according to human or AI control
+    this.__updatePlayerPosition(deltaTime);
 
     // Spawn new icicles based on the spawn rate
     this.lastIcicleSpawnTime += deltaTime;
@@ -346,12 +334,36 @@ ${Object.entries(params)
     const speed = this.player.speed;
     let dx = 0;
 
-    if (this.keyState["ArrowLeft"] || this.keyState["KeyA"]) {
-      dx -= speed * deltaTime;
+    if(this.controlledBy === "human") {
+      if (this.keyState["ArrowLeft"] || this.keyState["KeyA"]) {
+        dx -= speed * deltaTime;
+      }
+      if (this.keyState["ArrowRight"] || this.keyState["KeyD"]) {
+        dx += speed * deltaTime;
+      }
+    }else{
+
+
+      const leftMotor = this.motorNodes[0];
+      const rightMotor = this.motorNodes[1];
+      const spikeActivationLevel = this.params.spikeActivationLevel
+
+
+      // As a temporary test
+      const addedValue = (-1 + 2*Math.random()) * spikeActivationLevel * deltaTime
+      const leftMotorValue = leftMotor.value + addedValue/2;
+      const rightMotorValue = rightMotor.value -addedValue/2;
+      this.motorNodes[0].value = leftMotorValue;
+      this.motorNodes[1].value = rightMotorValue;
+
+
+      const differential = leftMotor.value - rightMotor.value
+
+      dx = differential/spikeActivationLevel * speed * deltaTime;
     }
-    if (this.keyState["ArrowRight"] || this.keyState["KeyD"]) {
-      dx += speed * deltaTime;
-    }
+
+
+
 
     // Update player's x position
     this.player.x += dx;
@@ -509,11 +521,19 @@ ${Object.entries(params)
   }
 
   __resetGame() {
+
     // Reset player position
     this.player.x = this.params.playfieldWidth / 2;
     this.player.y = this.params.playfieldHeight;
     this.player.circle.pos.x = this.player.x;
     this.player.circle.pos.y = this.player.y;
+
+    // Reset motor neuron value
+    if(this.controlledBy === "ai") {
+      this.motorNodes.forEach((motorNode) => {
+        motorNode.setValue(0)
+      })
+    }
 
     // Clear all icicles
     this.icicles = [];
