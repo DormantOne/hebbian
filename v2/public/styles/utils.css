@@ -9,3 +9,11 @@
 .display-flex {
     display: flex;
 }
+
+.visibility-hidden {
+    visibility: hidden;
+}
+
+.margin-top-auto {
+    margin-top: auto;
+}

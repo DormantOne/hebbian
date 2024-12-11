@@ -169,7 +169,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.motorNodes = [
       new NetworkNode(
         NetworkNodeRole.MOVEMENT,
-        [0.85 *Math.cos((90-this.params.sensorFOV/2)*Math.PI/180), 0],
+        [-0.85 *Math.cos((90-this.params.sensorFOV/2)*Math.PI/180), 0],
         this.params,
         this.networkNodeValueScale,
         {
@@ -178,7 +178,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       ),
       new NetworkNode(
         NetworkNodeRole.MOVEMENT,
-        [-0.85 *Math.cos((90-this.params.sensorFOV/2)*Math.PI/180), 0],
+        [0.85 *Math.cos((90-this.params.sensorFOV/2)*Math.PI/180), 0],
         this.params,
         this.networkNodeValueScale,
         {
@@ -334,33 +334,29 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     const speed = this.player.speed;
     let dx = 0;
 
+    const leftMotor = this.motorNodes[0];
+    const rightMotor = this.motorNodes[1];
+
     if(this.controlledBy === "human") {
+      leftMotor.setValue(0)
+      rightMotor.setValue(0)
+
       if (this.keyState["ArrowLeft"] || this.keyState["KeyA"]) {
-        dx -= speed * deltaTime;
+        leftMotor.setValue(1)
+        rightMotor.setValue(0)
       }
       if (this.keyState["ArrowRight"] || this.keyState["KeyD"]) {
-        dx += speed * deltaTime;
+        leftMotor.setValue(0)
+        rightMotor.setValue(1)
       }
-    }else{
-
-
-      const leftMotor = this.motorNodes[0];
-      const rightMotor = this.motorNodes[1];
-      const spikeActivationLevel = this.params.spikeActivationLevel
-
-
-      // As a temporary test
-      const addedValue = (-1 + 2*Math.random()) * spikeActivationLevel * deltaTime
-      const leftMotorValue = leftMotor.value + addedValue/2;
-      const rightMotorValue = rightMotor.value -addedValue/2;
-      this.motorNodes[0].value = leftMotorValue;
-      this.motorNodes[1].value = rightMotorValue;
-
-
-      const differential = leftMotor.value - rightMotor.value
-
-      dx = differential/spikeActivationLevel * speed * deltaTime;
     }
+
+
+    const spikeActivationLevel = this.params.spikeActivationLevel
+
+    const differential = rightMotor.value - leftMotor.value
+
+    dx = differential/spikeActivationLevel * speed * deltaTime;
 
 
 
