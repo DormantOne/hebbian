@@ -7,28 +7,58 @@ export function getVisCtx() {
   );
 }
 
-export function getVisCanvasSize() {
-  if (typeof window.visCanvasSize === "number") {
-    return window.visCanvasSize;
+export function getVisCanvasWidth() {
+  if (typeof window.visCanvasWidth === "number") {
+    return window.visCanvasWidth;
   }
   throw new Error(
-    "No visCanvasSize found. Page may not have initialized properly"
+    "No visCanvasWidth found. Page may not have initialized properly"
+  );
+}
+
+export function getVisCanvasHeight() {
+  if (typeof window.visCanvasHeight === "number") {
+    return window.visCanvasHeight;
+  }
+  throw new Error(
+    "No visCanvasHeight found. Page may not have initialized properly"
   );
 }
 
 export function normCartPointToPixel([ncX, ncY]) {
-  const size = getVisCanvasSize();
-  return [size / 2 + (ncX * size) / 2, size / 2 - (ncY * size) / 2];
+  const [width, height] =[ 
+    getVisCanvasWidth(),
+    getVisCanvasHeight()
+  ]
+  const smallest = Math.min(width, height);
+  return [width / 2 + (ncX * smallest) / 2, height / 2 - (ncY * smallest) / 2];
 }
 
 export function normCartSizeToPixel([nsW, nsH]) {
-  const size = getVisCanvasSize();
-  return [(nsW * size) / 2, (nsH * size) / 2];
+  const [width, height] =[ 
+    getVisCanvasWidth(),
+    getVisCanvasHeight()
+  ]
+  const smallest = Math.min(width, height);
+  return [(nsW * smallest) / 2, (nsH * smallest) / 2];
 }
 
 export function normCartDistToPixel(value) {
-  const size = getVisCanvasSize();
-  return (value * size) / 2;
+  const [width, height] =[ 
+    getVisCanvasWidth(),
+    getVisCanvasHeight()
+  ]
+  const smallest = Math.min(width, height);
+  return (value * smallest) / 2;
+}
+
+export function getNCExtent() {
+  const [width, height] =[ 
+    getVisCanvasWidth(),
+    getVisCanvasHeight()
+  ]
+  const smallest = Math.min(width, height);
+  return [width/smallest, height/smallest];
 }
 
 export class VisCoord {
@@ -40,5 +70,8 @@ export class VisCoord {
     }
     static distToPixel(value) {
         return normCartDistToPixel(value)
+    }
+    static getNCExtent() {
+      return getNCExtent()
     }
 }

@@ -2,7 +2,6 @@ import Icicle from "../game/Icicle.js";
 import { METER_TO_PIXEL } from "../game/constants.js";
 import SimulationError from "./SimulationError.js";
 import {
-  getNearestLabelContents,
   getNumberParamById,
   getStringRadioByName,
 } from "../ui/parameter-input.js";
@@ -12,7 +11,7 @@ import getRayPolygonIntersection from "../geo/getRayPolygonIntersection.js";
 import NetworkNode, { NetworkNodeRole } from "./NetworkNode.js";
 import DynamicScale from "../math/DynamicScale.js";
 import { DYNAMIC_SCALE_CUTOFF } from "../visualization/constants.js";
-import { getVisCanvasSize, getVisCtx } from "../visualization/coordinates.js";
+import { getVisCanvasWidth, getVisCanvasHeight, getVisCtx } from "../visualization/coordinates.js";
 
 /**
  * @typedef {Object} SimulationParams
@@ -604,8 +603,11 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     });
     this.networkNodeValueScale.compute(allNodeValues);
     const ctx = getVisCtx();
-    const ctxSize = getVisCanvasSize();
-    ctx.clearRect(0, 0, ctxSize, ctxSize);
+    const [ctxWidth, ctxHeight] = [
+      getVisCanvasWidth(),
+      getVisCanvasHeight(),
+    ];
+    ctx.clearRect(0, 0, ctxWidth, ctxHeight);
     this.sensorNodes.forEach((node) => {
       node.draw();
     });

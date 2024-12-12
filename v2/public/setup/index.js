@@ -231,13 +231,14 @@ window.onload = () => {
 
   function registerVisCanvas(){
     const {width, height} = visCanvasContainer.getBoundingClientRect();
-    const smallerOf = Math.min(width, height);
-    visCanvas.width = smallerOf;
-    visCanvas.height = smallerOf;
-    visCanvas.style.width = `${smallerOf}px`;
-    visCanvas.style.height = `${smallerOf}px`;
+    visCanvas.width = width;
+    visCanvas.height = height;
+    visCanvas.style.width = `${width}px`;
+    visCanvas.style.height = `${height}px`;
     window.visCanvasCtx = visCanvas.getContext('2d');
-    window.visCanvasSize = smallerOf
+    window.visCanvasWidth = width
+    window.visCanvasHeight = height
+    
   }
 
   registerVisCanvas()
@@ -247,4 +248,26 @@ window.onload = () => {
   })
 
   visCanvas.style.display = 'block';
+
+   const fitnessCanvasContainer = document.querySelector('.FitnessCanvasContainer');
+   const fitnessCanvas = document.querySelector('.FitnessCanvas');
+
+   function registerFitnessCanvas(){
+    const {width, height} = fitnessCanvasContainer.getBoundingClientRect();
+    fitnessCanvas.width = width;
+    fitnessCanvas.height = height;
+    fitnessCanvas.style.width = `${width}px`;
+    fitnessCanvas.style.height = `${height}px`;
+    window.fitnessCanvasCtx = fitnessCanvas.getContext('2d');
+    window.fitnessCanvasWidth= width
+    window.fitnessCanvasHeight = height
+   }
+
+   registerFitnessCanvas()
+
+   window.addEventListener('resize', () => {
+    registerFitnessCanvas();
+  })
+
+   fitnessCanvas.style.display = 'block';
 };

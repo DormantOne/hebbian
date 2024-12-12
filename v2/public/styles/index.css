@@ -409,6 +409,7 @@ body {
 .FitnessCanvas {
   border: 2px solid black;
   border-left: none;
+  border-right: none;
   background-color: rgb(210, 210, 230);
 }
 
