@@ -10,8 +10,12 @@ import DebugConsole from "../ui/DebugConsole.js";
 import getRayPolygonIntersection from "../geo/getRayPolygonIntersection.js";
 import NetworkNode, { NetworkNodeRole } from "./NetworkNode.js";
 import DynamicScale from "../math/DynamicScale.js";
-import { DYNAMIC_SCALE_CUTOFF } from "../visualization/constants.js";
-import { getVisCanvasWidth, getVisCanvasHeight, getVisCtx } from "../visualization/coordinates.js";
+import * as visCanvasUtils from "../visualization/coordinates.js";
+import * as fitnessCanvasUtils from "../metrics/fitness/coordinates.js";
+import { FITNESS_PLOT_NUM_FRAMES } from "../metrics/fitness/constants.js";
+import FixedSizeDeque from "../data-structures/CircularFixedSizeArray.js";
+import lerp from "../math/lerp.js";
+import { procMin,procMax } from "../math/procedural.js";
 
 /**
  * @typedef {Object} SimulationParams
@@ -64,7 +68,10 @@ export default class Simulation {
     this.sensorNodes = [];
     this.motorNodes = [];
     this.threatRayCount = 0;
-    this.networkNodeValueScale = new DynamicScale(DYNAMIC_SCALE_CUTOFF);
+    this.networkNodeValueScale = new DynamicScale();
+    this.fitnessPlotScale = new DynamicScale();
+    this.fitnessHistory = new FixedSizeDeque(FITNESS_PLOT_NUM_FRAMES, 0);
+    this.fitness = 0;
   }
 
   getState() {
@@ -131,7 +138,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       );
     }
 
-    DebugConsole.info('Beginning simulation...');
+    DebugConsole.info("Beginning simulation...");
 
     this.state = "starting";
     this.__updateUIForSimulationState();
@@ -149,6 +156,17 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.sensorDistances = new Array(params.numSensorRays).fill(null);
     this.sensorDetectionKinds = new Array(params.numSensorRays).fill(null);
     this.sensorNodes = [];
+
+    this.simMinFitness = 0
+    this.simMaxFitness = 0
+
+    window.fitnessPlotBounds.perSim.high.set(0)
+    window.fitnessPlotBounds.perSim.low.set(0)
+    window.fitnessPlotBounds.perPlot.high.set(0)
+    window.fitnessPlotBounds.perPlot.low.set(0)
+
+    
+
     for (let i = 0; i < params.numSensorRays; i++) {
       const theta =
         Math.PI / 2 +
@@ -168,7 +186,10 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.motorNodes = [
       new NetworkNode(
         NetworkNodeRole.MOVEMENT,
-        [-0.85 *Math.cos((90-this.params.sensorFOV/2)*Math.PI/180), 0],
+        [
+          -0.85 * Math.cos(((90 - this.params.sensorFOV / 2) * Math.PI) / 180),
+          0,
+        ],
         this.params,
         this.networkNodeValueScale,
         {
@@ -177,7 +198,10 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       ),
       new NetworkNode(
         NetworkNodeRole.MOVEMENT,
-        [0.85 *Math.cos((90-this.params.sensorFOV/2)*Math.PI/180), 0],
+        [
+          0.85 * Math.cos(((90 - this.params.sensorFOV / 2) * Math.PI) / 180),
+          0,
+        ],
         this.params,
         this.networkNodeValueScale,
         {
@@ -185,6 +209,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
         }
       ),
     ];
+
+    this.fitness = 0;
+    this.fitnessHistory.reset();
 
     // Bind the canvas resize function to the instance
     this.sizeAndClearCanvas = this.__sizeAndClearCanvas.bind(this);
@@ -279,6 +306,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       // Render the game
       this.__renderGame();
       this.__renderVisualization();
+      this.__renderFitnessPlot();
     }
 
     if (
@@ -297,7 +325,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   }
 
   __updateGame(deltaTime) {
-
     // Update player position according to human or AI control
     this.__updatePlayerPosition(deltaTime);
 
@@ -327,6 +354,45 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.__updateSensors();
 
     this.__updateThreatRayCount();
+
+    this.__reward(deltaTime)
+
+    this.__updateFitness(deltaTime);
+  }
+
+  __updateFitness(deltaTime) {
+
+    this.fitnessHistory.unshift(this.fitness);
+
+    const nextFitness = this.fitness * (1-this.params.fitnessDecayRatio*deltaTime);
+
+    this.fitness = nextFitness;
+
+    if(this.fitness < this.simMinFitness){
+      window.fitnessPlotBounds.perSim.low.set(this.fitness);
+      this.simMinFitness = this.fitness;
+    }
+
+    if(this.fitness > this.simMaxFitness){
+      window.fitnessPlotBounds.perSim.high.set(this.fitness);
+      this.simMaxFitness = this.fitness;
+    }
+
+    const minOfPlot = procMin(this.fitnessHistory.buffer)
+    const maxOfPlot = procMax(this.fitnessHistory.buffer)
+
+    window.fitnessPlotBounds.perPlot.high.set(maxOfPlot);
+    window.fitnessPlotBounds.perPlot.low.set(minOfPlot);
+
+  }
+
+  __reward(deltaTime){
+    const threatBonus = 1+(this.threatRayCount / this.params.numSensorRays)
+    this.fitness += this.params.survivalReward * threatBonus*deltaTime;
+  }
+
+  __punish(){
+    this.fitness -= this.params.deathPunishment;
   }
 
   __updatePlayerPosition(deltaTime) {
@@ -336,29 +402,25 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     const leftMotor = this.motorNodes[0];
     const rightMotor = this.motorNodes[1];
 
-    if(this.controlledBy === "human") {
-      leftMotor.setValue(0)
-      rightMotor.setValue(0)
+    if (this.controlledBy === "human") {
+      leftMotor.setValue(0);
+      rightMotor.setValue(0);
 
       if (this.keyState["ArrowLeft"] || this.keyState["KeyA"]) {
-        leftMotor.setValue(1)
-        rightMotor.setValue(0)
+        leftMotor.setValue(1);
+        rightMotor.setValue(0);
       }
       if (this.keyState["ArrowRight"] || this.keyState["KeyD"]) {
-        leftMotor.setValue(0)
-        rightMotor.setValue(1)
+        leftMotor.setValue(0);
+        rightMotor.setValue(1);
       }
     }
 
+    const spikeActivationLevel = this.params.spikeActivationLevel;
 
-    const spikeActivationLevel = this.params.spikeActivationLevel
+    const differential = rightMotor.value - leftMotor.value;
 
-    const differential = rightMotor.value - leftMotor.value
-
-    dx = differential/spikeActivationLevel * speed * deltaTime;
-
-
-
+    dx = (differential / spikeActivationLevel) * speed * deltaTime;
 
     // Update player's x position
     this.player.x += dx;
@@ -516,7 +578,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   }
 
   __resetGame() {
-
     // Reset player position
     this.player.x = this.params.playfieldWidth / 2;
     this.player.y = this.params.playfieldHeight;
@@ -524,10 +585,10 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.player.circle.pos.y = this.player.y;
 
     // Reset motor neuron value
-    if(this.controlledBy === "ai") {
+    if (this.controlledBy === "ai") {
       this.motorNodes.forEach((motorNode) => {
-        motorNode.setValue(0)
-      })
+        motorNode.setValue(0);
+      });
     }
 
     // Clear all icicles
@@ -561,6 +622,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   }
 
   __handleCollision() {
+    this.__punish()
     this.__resetGame();
   }
 
@@ -602,10 +664,10 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       allNodeValues.push(node.value);
     });
     this.networkNodeValueScale.compute(allNodeValues);
-    const ctx = getVisCtx();
+    const ctx = visCanvasUtils.getVisCtx();
     const [ctxWidth, ctxHeight] = [
-      getVisCanvasWidth(),
-      getVisCanvasHeight(),
+      visCanvasUtils.getVisCanvasWidth(),
+      visCanvasUtils.getVisCanvasHeight(),
     ];
     ctx.clearRect(0, 0, ctxWidth, ctxHeight);
     this.sensorNodes.forEach((node) => {
@@ -614,6 +676,51 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.motorNodes.forEach((node) => {
       node.draw();
     });
+  }
+
+  __renderFitnessPlot() {
+    const [width, height] = [
+      fitnessCanvasUtils.getFitnessCanvasWidth(),
+      fitnessCanvasUtils.getFitnessCanvasHeight(),
+    ];
+    const fitnessCtx = fitnessCanvasUtils.getFitnessCtx();
+    fitnessCtx.clearRect(0, 0, width, height);
+    const [ncExtentW, ncExtentH] = fitnessCanvasUtils.getNCExtent();
+    this.fitnessPlotScale.compute(this.fitnessHistory.buffer);
+    const pixelCoords = [];
+    for (let i = 0; i < FITNESS_PLOT_NUM_FRAMES; i++) {
+      const arrayIndex = FITNESS_PLOT_NUM_FRAMES - 1 - i; // Reverse the array to get the oldest frame first
+      const fitness = this.fitnessHistory.get(arrayIndex);
+  
+      const ncX = lerp(
+        -ncExtentW,
+        ncExtentW,
+        i / (FITNESS_PLOT_NUM_FRAMES - 1)
+      );
+
+      const ncY =
+        ncExtentH *
+        (2 * (-0.5 + this.fitnessPlotScale.getLevelOrDefault(fitness, 0)))
+      pixelCoords.push(
+        fitnessCanvasUtils.FitnessCoord.pointToPixel([ncX, ncY])
+      )
+
+      
+    }
+
+    fitnessCtx.beginPath();
+    fitnessCtx.strokeStyle = this.fitness < 0 ? "red" : "green";
+    fitnessCtx.lineWidth = 4;
+    
+    for (let i = 0; i < pixelCoords.length - 1; i++) {
+      const coord1 = pixelCoords[i];
+      const coord2 = pixelCoords[i + 1];
+      fitnessCtx.moveTo(coord1[0], coord1[1]);
+      fitnessCtx.lineTo(coord2[0], coord2[1]);
+    }
+    fitnessCtx.stroke();
+
+
   }
 
   __updateThreatRayCount() {

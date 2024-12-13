@@ -242,7 +242,7 @@
                     second survived
                   </p>
                 </aside>
-                <input typse="number" id="survivalReward" value="0.1" />
+                <input type="number" id="survivalReward" value="1" />
               </div>
               <div class="ParameterControl">
                 <label
@@ -255,7 +255,7 @@
                     (instantaneously) on death
                   </p>
                 </aside>
-                <input type="number" id="deathPunishment" value="15" />
+                <input type="number" id="deathPunishment" value="10" />
               </div>
               <div class="ParameterControl">
                 <label
@@ -441,10 +441,10 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
           </table>
           <div class="FitnessPlotContainer">
             <div class="FitnessPlotBoundsContainer">
-              <div class="FitnessPlotBound FitnessPlotPerSimBound" id="simMax">0.000</div>
-              <div class="FitnessPlotBound FitnessPlotPerPlotBound" id="plotMax">0.000</div>
-              <div class="FitnessPlotBound FitnessPlotPerPlotBound margin-top-auto" id="plotMin">0.000</div>
-              <div class="FitnessPlotBound FitnessPlotPerSimBound" id="simMin">0.000</div>
+              <div class="FitnessPlotBound FitnessPlotPerSimBound High" id="simMax">0.000</div>
+              <div class="FitnessPlotBound FitnessPlotPerPlotBound High" id="plotMax">0.000</div>
+              <div class="FitnessPlotBound FitnessPlotPerPlotBound margin-top-auto Low" id="plotMin">0.000</div>
+              <div class="FitnessPlotBound FitnessPlotPerSimBound Low" id="simMin">0.000</div>
             </div>
             <div class="FitnessCanvasAndSpacersContainer">
               <div class="FitnessPlotBound visibility-hidden">0.000</div>

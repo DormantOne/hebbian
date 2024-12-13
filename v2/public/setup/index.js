@@ -261,6 +261,7 @@ window.onload = () => {
     window.fitnessCanvasCtx = fitnessCanvas.getContext('2d');
     window.fitnessCanvasWidth= width
     window.fitnessCanvasHeight = height
+    console.log(window.fitnessCanvasWidth, window.fitnessCanvasHeight, window.fitnessCanvasHeight)
    }
 
    registerFitnessCanvas()
@@ -268,6 +269,46 @@ window.onload = () => {
    window.addEventListener('resize', () => {
     registerFitnessCanvas();
   })
+
+    window.fitnessPlotPerSimBoundHigh = document.querySelector('.FitnessPlotPerSimBound.High');
+    window.fitnessPlotPerPlotBoundHigh = document.querySelector('.FitnessPlotPerPlotBound.High');
+    window.fitnessPlotPerPlotBoundLow = document.querySelector('.FitnessPlotPerPlotBound.Low');
+    window.fitnessPlotPerSimBoundLow = document.querySelector('.FitnessPlotPerSimBound.Low');
+
+    console.log(
+      window.fitnessPlotPerSimBoundHigh,
+      window.fitnessPlotPerPlotBoundHigh,
+      window.fitnessPlotPerPlotBoundLow,
+      window.fitnessPlotPerSimBoundLow,
+    )
+
+    window.fitnessPlotBounds = {
+      perPlot: {
+        high: {
+          set: (value) => {
+            window.fitnessPlotPerPlotBoundHigh.textContent = value.toFixed(3)
+          },
+        },
+        low: {
+          set: (value) => {
+            window.fitnessPlotPerPlotBoundLow.textContent = value.toFixed(3)
+          },
+        },
+      },
+      perSim: {
+        high: {
+          set: (value) => {
+            window.fitnessPlotPerSimBoundHigh.textContent = value.toFixed(3)
+          },
+        },
+        low: {
+          set: (value) => {
+            window.fitnessPlotPerSimBoundLow.textContent = value.toFixed(3)
+          },
+        },
+      }
+    }
+
 
    fitnessCanvas.style.display = 'block';
 };

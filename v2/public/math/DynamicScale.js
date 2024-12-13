@@ -5,7 +5,7 @@ export default class DynamicScale {
    * @param {number} cutoff - The smallest value range of values.
    * For smaller ranges, NaN is always returned
    */
-  constructor(cutoff) {
+  constructor(cutoff=1e-9) {
     this.cutoff = cutoff;
     this.start = NaN;
     this.range = NaN;

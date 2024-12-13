@@ -363,6 +363,7 @@ body {
   display: flex;
   flex-direction: row;
   align-items: stretch;
+  background-color: rgb(195, 208, 210);
 }
 
 .FitnessPlotBoundsContainer {
@@ -370,15 +371,13 @@ body {
   flex-direction: column;
   background-color: rgb(195, 208, 210);
   border-right: 2px solid black;
-
 }
 
 .FitnessPlotBound {
 }
 
 .FitnessPlotPerSimBound {
-  background-color: white;
-
+  background-color: rgb(195, 208, 210);
 }
 
 .FitnessPlotPerPlotBound {
@@ -386,7 +385,6 @@ body {
   border: 2px solid black;
   border-right: none;
   border-left: none;
-
 }
 
 .FitnessCanvasAndSpacersContainer {
