@@ -261,7 +261,6 @@ window.onload = () => {
     window.fitnessCanvasCtx = fitnessCanvas.getContext('2d');
     window.fitnessCanvasWidth= width
     window.fitnessCanvasHeight = height
-    console.log(window.fitnessCanvasWidth, window.fitnessCanvasHeight, window.fitnessCanvasHeight)
    }
 
    registerFitnessCanvas()
@@ -274,14 +273,7 @@ window.onload = () => {
     window.fitnessPlotPerPlotBoundHigh = document.querySelector('.FitnessPlotPerPlotBound.High');
     window.fitnessPlotPerPlotBoundLow = document.querySelector('.FitnessPlotPerPlotBound.Low');
     window.fitnessPlotPerSimBoundLow = document.querySelector('.FitnessPlotPerSimBound.Low');
-
-    console.log(
-      window.fitnessPlotPerSimBoundHigh,
-      window.fitnessPlotPerPlotBoundHigh,
-      window.fitnessPlotPerPlotBoundLow,
-      window.fitnessPlotPerSimBoundLow,
-    )
-
+    
     window.fitnessPlotBounds = {
       perPlot: {
         high: {

@@ -1,4 +1,4 @@
-import fisherYatesShuffled from 'fisher-yates'
+import fisherYatesShuffled from '../third-party/npm/fisher-yates.js'
 
 /**
  * @param {number} N 
@@ -73,6 +73,15 @@ export class MapUtil {
             return this.getOrThrow(key)
         }
         return this.addWithUniqueKey(value)
+    }
+
+    setOrAddWithUniqueKey(key, value){
+        this.map.set(key, value)
+        return this.getOrThrow(key)
+    }
+
+    has(key){
+        return this.map.has(key)
     }
 
     forEachEntryFisherYates(callback){

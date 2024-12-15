@@ -16,6 +16,8 @@ import { FITNESS_PLOT_NUM_FRAMES } from "../metrics/fitness/constants.js";
 import FixedSizeDeque from "../data-structures/CircularFixedSizeArray.js";
 import lerp from "../math/lerp.js";
 import { procMin, procMax } from "../math/procedural.js";
+import { MapUtil } from "../utils/collections.js";
+import NetworkProcessor from "./NetworkProcessor.js";
 
 /**
  * @typedef {Object} SimulationParams
@@ -215,7 +217,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     // Add references to visual and motor nodes to the brain under reserved ids
     for (let i = 0; i < this.sensorNodes.length; i++) {
-      this.brain.set(`sensor${i}`, this.sensorNodes[i]);
+      this.brainNodes.set(`sensor${i}`, this.sensorNodes[i]);
     }
 
     this.brainNodes.set("motorLeft", this.motorNodes[0]);
@@ -223,7 +225,12 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     this.brainEdges = new Map();
 
-    this.brain = new Brain(params, this.brainNodes, this.brainEdges);
+    this.networkProcessor = new NetworkProcessor(
+      params,
+      this.brainNodes,
+      this.brainEdges,
+      this.networkNodeValueScale
+    );
 
     this.fitness = 0;
     this.fitnessHistory.reset();
@@ -317,7 +324,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     if (this.state === "running") {
       // Update game logic
-      this.brain.__update(deltaTime,this.fitness)
+      this.networkProcessor.__update(deltaTime, this.fitness);
       this.__updateGame(deltaTime);
       // Render the game
       this.__renderGame();
@@ -433,7 +440,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     const spikeActivationLevel = this.params.spikeActivationLevel;
 
-    const differential = rightMotor.value - leftMotor.value;
+    const differential = rightMotor.getValue() - leftMotor.getValue();
 
     dx = (differential / spikeActivationLevel) * speed * deltaTime;
 
@@ -671,13 +678,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
   __renderVisualization() {
     this.networkNodeValueScale.clear();
-    const allNodeValues = [];
-    this.sensorNodes.forEach((node) => {
-      allNodeValues.push(node.value);
-    });
-    this.motorNodes.forEach((node) => {
-      allNodeValues.push(node.value);
-    });
+    const allNodeValues = this.brainNodes
+      .values()
+      .map((node) => node.getValue());
     this.networkNodeValueScale.compute(allNodeValues);
     const ctx = visCanvasUtils.getVisCtx();
     const [ctxWidth, ctxHeight] = [
@@ -685,10 +688,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       visCanvasUtils.getVisCanvasHeight(),
     ];
     ctx.clearRect(0, 0, ctxWidth, ctxHeight);
-    this.sensorNodes.forEach((node) => {
-      node.draw();
-    });
-    this.motorNodes.forEach((node) => {
+    new MapUtil(this.brainNodes).forEachEntryFisherYates(([, node]) => {
       node.draw();
     });
   }

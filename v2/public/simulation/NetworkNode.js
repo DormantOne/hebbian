@@ -75,6 +75,10 @@ export default class NetworkNode {
     return this;
   }
 
+  getValue(){
+    return this.value
+  }
+
   draw() {
     const ctx = getVisCtx();
     const radiusPixels =
