@@ -231,13 +231,14 @@ window.onload = () => {
 
   function registerVisCanvas(){
     const {width, height} = visCanvasContainer.getBoundingClientRect();
-    visCanvas.width = width;
-    visCanvas.height = height;
-    visCanvas.style.width = `${width}px`;
-    visCanvas.style.height = `${height}px`;
+    const smaller = Math.min(width, height);
+    visCanvas.width = smaller;
+    visCanvas.height = smaller;
+    visCanvas.style.width = `${smaller}px`;
+    visCanvas.style.height = `${smaller}px`;
     window.visCanvasCtx = visCanvas.getContext('2d');
-    window.visCanvasWidth = width
-    window.visCanvasHeight = height
+    window.visCanvasWidth = smaller
+    window.visCanvasHeight = smaller
     
   }
 
@@ -273,7 +274,7 @@ window.onload = () => {
     window.fitnessPlotPerPlotBoundHigh = document.querySelector('.FitnessPlotPerPlotBound.High');
     window.fitnessPlotPerPlotBoundLow = document.querySelector('.FitnessPlotPerPlotBound.Low');
     window.fitnessPlotPerSimBoundLow = document.querySelector('.FitnessPlotPerSimBound.Low');
-    
+
     window.fitnessPlotBounds = {
       perPlot: {
         high: {

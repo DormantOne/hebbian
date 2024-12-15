@@ -30,11 +30,12 @@ export default class NetworkProcessor {
     }
     DebugConsole.log("Spawning new node...");
     const [ncExtentW, ncExtentH] = VisCoord.getNCExtent();
+    const smallerNCExtent = Math.min(ncExtentW, ncExtentH);
     const newNode = new NetworkNode(
       NetworkNodeRole.NORMAL,
       [
-        randomUniformInclusive(-1, 1) * ncExtentW,
-        randomUniformInclusive(-1, 1) * ncExtentH,
+        randomUniformInclusive(-1, 1) * smallerNCExtent,
+        randomUniformInclusive(-1, 1) * smallerNCExtent,
       ],
       this.params,
       this.nodeVisValueScale,
