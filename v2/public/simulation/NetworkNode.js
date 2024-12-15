@@ -10,6 +10,10 @@ import { getVisCtx, VisCoord } from "../visualization/coordinates.js";
  */
 
 /**
+ * @typedef {import('./NetworkEdge.js').default} NetworkEdge
+ */
+
+/**
  * @enum {number}
  */
 export const NetworkNodeRole = Object.freeze({
@@ -40,6 +44,26 @@ export default class NetworkNode {
     this.options = options || {
       visualScale: 1,
     };
+    /**
+     * @type {<Map<string, NetworkEdge>>} - A cache of the IDs of all edge objects that point towards this node
+     * 
+     * Note: The source of truth is the full Map object of the edges stored in the Simulation object
+     * Technically, this could be recreated from the central Map
+     * But that is slow
+     * 
+     * The drawback of caching is that it has to be kept in sync with changes to the central Map,
+     * but such is the trade-off made in any caching endeavor
+     */
+    this.edgeIdCacheIn = new Map();
+    /**
+     * @type {<Map<string, NetworkEdge>>} - A cache of the IDs of all edge objects that point away from this node
+     * 
+     * Similar idea to edgeIdCacheIn, but points away from this node
+     * 
+     * Remember, in our model, each node is a many-in-many-out system
+     */
+    this.edgeIdCacheOut = new Map();
+
   }
 
   /**

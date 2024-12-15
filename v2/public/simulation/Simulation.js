@@ -15,7 +15,7 @@ import * as fitnessCanvasUtils from "../metrics/fitness/coordinates.js";
 import { FITNESS_PLOT_NUM_FRAMES } from "../metrics/fitness/constants.js";
 import FixedSizeDeque from "../data-structures/CircularFixedSizeArray.js";
 import lerp from "../math/lerp.js";
-import { procMin,procMax } from "../math/procedural.js";
+import { procMin, procMax } from "../math/procedural.js";
 
 /**
  * @typedef {Object} SimulationParams
@@ -67,6 +67,9 @@ export default class Simulation {
     this.sensorDetectionKinds = []; // Array to store detected kinds
     this.sensorNodes = [];
     this.motorNodes = [];
+    /** @type {Map<string,NetworkNode>} */
+    this.brainNodes = new Map();
+    this.brainEdges = new Map();
     this.threatRayCount = 0;
     this.networkNodeValueScale = new DynamicScale();
     this.fitnessPlotScale = new DynamicScale();
@@ -157,15 +160,13 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.sensorDetectionKinds = new Array(params.numSensorRays).fill(null);
     this.sensorNodes = [];
 
-    this.simMinFitness = 0
-    this.simMaxFitness = 0
+    this.simMinFitness = 0;
+    this.simMaxFitness = 0;
 
-    window.fitnessPlotBounds.perSim.high.set(0)
-    window.fitnessPlotBounds.perSim.low.set(0)
-    window.fitnessPlotBounds.perPlot.high.set(0)
-    window.fitnessPlotBounds.perPlot.low.set(0)
-
-    
+    window.fitnessPlotBounds.perSim.high.set(0);
+    window.fitnessPlotBounds.perSim.low.set(0);
+    window.fitnessPlotBounds.perPlot.high.set(0);
+    window.fitnessPlotBounds.perPlot.low.set(0);
 
     for (let i = 0; i < params.numSensorRays; i++) {
       const theta =
@@ -209,6 +210,20 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
         }
       ),
     ];
+
+    this.brainNodes = new Map();
+
+    // Add references to visual and motor nodes to the brain under reserved ids
+    for (let i = 0; i < this.sensorNodes.length; i++) {
+      this.brain.set(`sensor${i}`, this.sensorNodes[i]);
+    }
+
+    this.brainNodes.set("motorLeft", this.motorNodes[0]);
+    this.brainNodes.set("motorRight", this.motorNodes[1]);
+
+    this.brainEdges = new Map();
+
+    this.brain = new Brain(params, this.brainNodes, this.brainEdges);
 
     this.fitness = 0;
     this.fitnessHistory.reset();
@@ -302,6 +317,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     if (this.state === "running") {
       // Update game logic
+      this.brain.__update(deltaTime,this.fitness)
       this.__updateGame(deltaTime);
       // Render the game
       this.__renderGame();
@@ -355,43 +371,42 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     this.__updateThreatRayCount();
 
-    this.__reward(deltaTime)
+    this.__reward(deltaTime);
 
     this.__updateFitness(deltaTime);
   }
 
   __updateFitness(deltaTime) {
-
     this.fitnessHistory.unshift(this.fitness);
 
-    const nextFitness = this.fitness * (1-this.params.fitnessDecayRatio*deltaTime);
+    const nextFitness =
+      this.fitness * (1 - this.params.fitnessDecayRatio * deltaTime);
 
     this.fitness = nextFitness;
 
-    if(this.fitness < this.simMinFitness){
+    if (this.fitness < this.simMinFitness) {
       window.fitnessPlotBounds.perSim.low.set(this.fitness);
       this.simMinFitness = this.fitness;
     }
 
-    if(this.fitness > this.simMaxFitness){
+    if (this.fitness > this.simMaxFitness) {
       window.fitnessPlotBounds.perSim.high.set(this.fitness);
       this.simMaxFitness = this.fitness;
     }
 
-    const minOfPlot = procMin(this.fitnessHistory.buffer)
-    const maxOfPlot = procMax(this.fitnessHistory.buffer)
+    const minOfPlot = procMin(this.fitnessHistory.buffer);
+    const maxOfPlot = procMax(this.fitnessHistory.buffer);
 
     window.fitnessPlotBounds.perPlot.high.set(maxOfPlot);
     window.fitnessPlotBounds.perPlot.low.set(minOfPlot);
-
   }
 
-  __reward(deltaTime){
-    const threatBonus = 1+(this.threatRayCount / this.params.numSensorRays)
-    this.fitness += this.params.survivalReward * threatBonus*deltaTime;
+  __reward(deltaTime) {
+    const threatBonus = 1 + this.threatRayCount / this.params.numSensorRays;
+    this.fitness += this.params.survivalReward * threatBonus * deltaTime;
   }
 
-  __punish(){
+  __punish() {
     this.fitness -= this.params.deathPunishment;
   }
 
@@ -622,7 +637,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   }
 
   __handleCollision() {
-    this.__punish()
+    this.__punish();
     this.__resetGame();
   }
 
@@ -691,7 +706,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     for (let i = 0; i < FITNESS_PLOT_NUM_FRAMES; i++) {
       const arrayIndex = FITNESS_PLOT_NUM_FRAMES - 1 - i; // Reverse the array to get the oldest frame first
       const fitness = this.fitnessHistory.get(arrayIndex);
-  
+
       const ncX = lerp(
         -ncExtentW,
         ncExtentW,
@@ -700,18 +715,16 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
       const ncY =
         ncExtentH *
-        (2 * (-0.5 + this.fitnessPlotScale.getLevelOrDefault(fitness, 0)))
+        (2 * (-0.5 + this.fitnessPlotScale.getLevelOrDefault(fitness, 0)));
       pixelCoords.push(
         fitnessCanvasUtils.FitnessCoord.pointToPixel([ncX, ncY])
-      )
-
-      
+      );
     }
 
     fitnessCtx.beginPath();
     fitnessCtx.strokeStyle = this.fitness < 0 ? "red" : "green";
     fitnessCtx.lineWidth = 4;
-    
+
     for (let i = 0; i < pixelCoords.length - 1; i++) {
       const coord1 = pixelCoords[i];
       const coord2 = pixelCoords[i + 1];
@@ -719,8 +732,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       fitnessCtx.lineTo(coord2[0], coord2[1]);
     }
     fitnessCtx.stroke();
-
-
   }
 
   __updateThreatRayCount() {
