@@ -36,7 +36,7 @@ window.onload = () => {
     }
     const content = element.textContent || element.innerText;
     // Just for proper type safety
-    // Since I dont feel like ensuring exhaustive handling of all cases
+    // Since I don't feel like ensuring exhaustive handling of all cases
     if (typeof displayMode === "undefined") {
       throw new Error(
         "Could not determine or infer math display mode. This should never occur."

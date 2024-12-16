@@ -155,11 +155,11 @@
               </div>
               <div class="ParameterControl">
                 <label>Max Nodes (Includes sensor and motor nodes.)</label>
-                <input type="number" id="maxNodes" value="200" />
+                <input type="number" id="maxNodes" value="250" />
               </div>
               <div class="ParameterControl">
                 <label>Max Edges (Edges are unidirectional.)</label>
-                <input type="number" id="maxEdges" value="8000" />
+                <input type="number" id="maxEdges" value="1000" />
               </div>
               <div class="ParameterControl">
                 <label>Max Absolute Node Value</label>
@@ -382,12 +382,12 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                 >
                 <aside>
                   <p>
-                    The average number of edges, on a given node, that will
+                    The average number of edges, throughout the entire network, that will
                     spawn per second
                   </p>
                 </aside>
 
-                <input type="number" id="edgeSpawnRate" value="2" />
+                <input type="number" id="edgeSpawnRate" value="0.5" />
               </div>
             </div>
           </div>

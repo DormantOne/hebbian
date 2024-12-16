@@ -1,3 +1,11 @@
+import { randomUniformInclusive } from "../math/random.js";
+import DebugConsole from "../ui/DebugConsole.js";
+import { MapUtil } from "../utils/collections.js";
+import { VisCoord } from "../visualization/coordinates.js";
+import NetworkNode, { NetworkNodeRole } from "./NetworkNode.js";
+import NetworkEdge from "./NetworkEdge.js";
+import { randomChoice } from "../utils/collections.js";
+
 /**
  * @typedef {import('./Simulation.js').SimulationParams} SimulationParams
  */
@@ -5,22 +13,18 @@
  * @typedef {import('./NetworkNode.js').default} NetworkNode
  */
 
-import { randomUniformInclusive } from "../math/random.js";
-import DebugConsole from "../ui/DebugConsole.js";
-import { MapUtil } from "../utils/collections.js";
-import { VisCoord } from "../visualization/coordinates.js";
-import NetworkNode, { NetworkNodeRole } from "./NetworkNode.js";
-
 export default class NetworkProcessor {
   /**
    *
    * @param {SimulationParams} params
    * @param {Map<string,NetworkNode>} nodes
    */
-  constructor(params, nodes, edges, nodeVisValueScale) {
+  constructor(params, nodes, edges, nodeVisValueScale, edgeVisStrengthScale) {
     this.params = params;
     this.nodes = nodes;
+    this.edges = edges;
     this.nodeVisValueScale = nodeVisValueScale;
+    this.edgeVisStrengthScale = edgeVisStrengthScale;
   }
 
   spawnNode() {
@@ -44,7 +48,27 @@ export default class NetworkProcessor {
       }
     );
     new MapUtil(this.nodes).addWithUniqueKey(newNode);
+  }
 
+  connectWithEdge(sourceNodeId, targetNodeId) {
+    new MapUtil(this.edges).setOrAddWithUniqueKey(
+      `${sourceNodeId}_${targetNodeId}`,
+      new NetworkEdge(
+        sourceNodeId,
+        targetNodeId,
+        1.0,
+        this.params,
+        this.nodes,
+        this.edgeVisStrengthScale
+      )
+    );
+  }
+
+  spawnEdge(sourceNodeId) {
+    const allIdsSet = new Set(this.nodes.keys());
+    allIdsSet.delete(sourceNodeId);
+    const targetNodeId = randomChoice(Array.from(allIdsSet));
+    this.connectWithEdge(sourceNodeId, targetNodeId);
   }
 
   /**
@@ -54,8 +78,16 @@ export default class NetworkProcessor {
   __update(deltaTime, fitness) {
     // Traverse in random order to avoid traversal order effects
     // Using a buffer based approach is more accurate but more difficult to implement as well as doubling the memory requirement
-    new MapUtil(this.nodes).forEachEntryFisherYates((node, i) => {
-      // todo
+    const numNodes = this.nodes.size;
+    new MapUtil(this.nodes).forEachEntryFisherYates(([id, node]) => {
+      if (Math.random() < deltaTime * this.params.edgeSpawnRate / numNodes) {
+        if (this.edges.size < this.params.maxEdges) {
+          DebugConsole.log("Spawning new edge...");
+          this.spawnEdge(id);
+        } else {
+          DebugConsole.error("Maximum number of edges reached");
+        }
+      }
     });
 
     if (Math.random() < deltaTime * this.params.nodeSpawnRate) {

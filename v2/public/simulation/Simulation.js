@@ -74,6 +74,7 @@ export default class Simulation {
     this.brainEdges = new Map();
     this.threatRayCount = 0;
     this.networkNodeValueScale = new DynamicScale();
+    this.networkEdgeStrengthScale = new DynamicScale();
     this.fitnessPlotScale = new DynamicScale();
     this.fitnessHistory = new FixedSizeDeque(FITNESS_PLOT_NUM_FRAMES, 0);
     this.fitness = 0;
@@ -229,8 +230,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       params,
       this.brainNodes,
       this.brainEdges,
-      this.networkNodeValueScale
-    );
+      this.networkNodeValueScale,
+      this.networkEdgeStrengthScale
+    )
 
     this.fitness = 0;
     this.fitnessHistory.reset();
@@ -681,7 +683,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     const allNodeValues = Array.from(this.brainNodes
       .values()
       .map((node) => node.getValue()));
+    const allEdgeStrengths = Array.from(this.brainEdges.values()).map((edge) => edge.strength);
     this.networkNodeValueScale.compute(allNodeValues);
+    this.networkEdgeStrengthScale.compute(allEdgeStrengths);
     const ctx = visCanvasUtils.getVisCtx();
     const [ctxWidth, ctxHeight] = [
       visCanvasUtils.getVisCanvasWidth(),
@@ -690,6 +694,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     ctx.clearRect(0, 0, ctxWidth, ctxHeight);
     new MapUtil(this.brainNodes).forEachEntryFisherYates(([, node]) => {
       node.draw();
+    });
+    new MapUtil(this.brainEdges).forEachEntryFisherYates(([, edge]) => {
+      edge.draw();
     });
   }
 
