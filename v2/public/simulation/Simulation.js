@@ -678,9 +678,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
   __renderVisualization() {
     this.networkNodeValueScale.clear();
-    const allNodeValues = this.brainNodes
+    const allNodeValues = Array.from(this.brainNodes
       .values()
-      .map((node) => node.getValue());
+      .map((node) => node.getValue()));
     this.networkNodeValueScale.compute(allNodeValues);
     const ctx = visCanvasUtils.getVisCtx();
     const [ctxWidth, ctxHeight] = [
