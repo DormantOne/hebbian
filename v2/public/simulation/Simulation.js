@@ -35,6 +35,7 @@ import NetworkProcessor from "./NetworkProcessor.js";
  * @property {number} maxEdges - Maximum number of edges
  * @property {number} maxAbsoluteNodeValue - Maximum absolute value for nodes
  * @property {number} maxAbsoluteEdgeStrength - Maximum absolute strength for edges
+ * @property {number} firingThreshold - The accrued value at which a node fires
  * @property {number} spikeActivationLevel - Activation level for spikes
  * @property {number} spikeDecayTimeConstant - Time constant for spike decay
  * @property {number} spikeRefractoryPeriod - Refractory period for spikes
@@ -112,6 +113,7 @@ export default class Simulation {
         "maxAbsoluteEdgeStrength",
 
         // Learning Parameters
+        "firingThreshold",
         "spikeActivationLevel",
         "spikeDecayTimeConstant",
         "spikeRefractoryPeriod",
@@ -171,6 +173,10 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     window.fitnessPlotBounds.perPlot.high.set(0);
     window.fitnessPlotBounds.perPlot.low.set(0);
 
+    this.brainNodes = new Map();
+    this.brainEdges = new Map();
+
+
     for (let i = 0; i < params.numSensorRays; i++) {
       const theta =
         Math.PI / 2 +
@@ -183,7 +189,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
           NetworkNodeRole.VISUAL,
           [Math.cos(theta) * 0.85, Math.sin(theta) * 0.85],
           this.params,
-          this.networkNodeValueScale
+          this.networkNodeValueScale,
+          this.brainNodes,
+          this.brainEdges,
         )
       );
     }
@@ -196,6 +204,8 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
         ],
         this.params,
         this.networkNodeValueScale,
+        this.brainNodes,
+        this.brainEdges,
         {
           visualScale: 3,
         }
@@ -208,13 +218,14 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
         ],
         this.params,
         this.networkNodeValueScale,
+        this.brainNodes,
+        this.brainEdges,
         {
           visualScale: 3,
         }
       ),
     ];
 
-    this.brainNodes = new Map();
 
     // Add references to visual and motor nodes to the brain under reserved ids
     for (let i = 0; i < this.sensorNodes.length; i++) {
@@ -224,7 +235,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.brainNodes.set("motorLeft", this.motorNodes[0]);
     this.brainNodes.set("motorRight", this.motorNodes[1]);
 
-    this.brainEdges = new Map();
 
     this.networkProcessor = new NetworkProcessor(
       params,

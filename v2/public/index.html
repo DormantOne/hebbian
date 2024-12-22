@@ -186,6 +186,16 @@
             >
               <div class="ParameterControl">
                 <label
+                  >Firing Threshold
+                  <span class="katex">V_{f}</span> (unitless)</label
+                >
+                <aside>
+                  <p>The accrued value at which a neuron fires.</p>
+                </aside>
+                <input type="number" id="firingThreshold" value="1.5" />
+              </div>
+              <div class="ParameterControl">
+                <label
                   >Spike Activation Level
                   <span class="katex">V_{s}</span> (unitless)</label
                 >
@@ -382,8 +392,8 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                 >
                 <aside>
                   <p>
-                    The average number of edges, throughout the entire network, that will
-                    spawn per second
+                    The average number of edges, throughout the entire network,
+                    that will spawn per second
                   </p>
                 </aside>
 
@@ -441,10 +451,30 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
           </table>
           <div class="FitnessPlotContainer">
             <div class="FitnessPlotBoundsContainer">
-              <div class="FitnessPlotBound FitnessPlotPerSimBound High" id="simMax">0.000</div>
-              <div class="FitnessPlotBound FitnessPlotPerPlotBound High" id="plotMax">0.000</div>
-              <div class="FitnessPlotBound FitnessPlotPerPlotBound margin-top-auto Low" id="plotMin">0.000</div>
-              <div class="FitnessPlotBound FitnessPlotPerSimBound Low" id="simMin">0.000</div>
+              <div
+                class="FitnessPlotBound FitnessPlotPerSimBound High"
+                id="simMax"
+              >
+                0.000
+              </div>
+              <div
+                class="FitnessPlotBound FitnessPlotPerPlotBound High"
+                id="plotMax"
+              >
+                0.000
+              </div>
+              <div
+                class="FitnessPlotBound FitnessPlotPerPlotBound margin-top-auto Low"
+                id="plotMin"
+              >
+                0.000
+              </div>
+              <div
+                class="FitnessPlotBound FitnessPlotPerSimBound Low"
+                id="simMin"
+              >
+                0.000
+              </div>
             </div>
             <div class="FitnessCanvasAndSpacersContainer">
               <div class="FitnessPlotBound visibility-hidden">0.000</div>
@@ -458,8 +488,6 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
               </div>
               <div class="FitnessPlotBound visibility-hidden">0.000</div>
             </div>
-
-
           </div>
         </div>
       </div>

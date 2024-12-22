@@ -36,6 +36,10 @@ export default class NetworkEdge {
     this.edgeVisStrengthScale = edgeVisStrengthScale;
   }
 
+  getId() {
+    return `${this.sourceNodeId}_${this.targetNodeId}`;
+  }
+
   getSourceNode() {
     if (this.sourceNodeId === null) {
       return null;
@@ -48,6 +52,11 @@ export default class NetworkEdge {
       return null;
     }
     return new MapUtil(this.nodes).getOrThrow(this.targetNodeId);
+  }
+
+  registerWithConnectedNodes() {
+    this.getSourceNode().edgeIdCacheOut.add(this.getId());
+    this.getTargetNode().edgeIdCacheIn.add(this.getId());
   }
 
   draw() {

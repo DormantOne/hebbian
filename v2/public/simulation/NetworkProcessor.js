@@ -45,29 +45,39 @@ export default class NetworkProcessor {
       this.nodeVisValueScale,
       {
         visualScale: 2,
-      }
+      },
+      this.nodes,
+      this.edges
     );
     new MapUtil(this.nodes).addWithUniqueKey(newNode);
   }
 
   connectWithEdge(sourceNodeId, targetNodeId) {
+    const newEdge =  new NetworkEdge(
+      sourceNodeId,
+      targetNodeId,
+      1.0,
+      this.params,
+      this.nodes,
+      this.edgeVisStrengthScale
+    )
     new MapUtil(this.edges).setOrAddWithUniqueKey(
       `${sourceNodeId}_${targetNodeId}`,
-      new NetworkEdge(
-        sourceNodeId,
-        targetNodeId,
-        1.0,
-        this.params,
-        this.nodes,
-        this.edgeVisStrengthScale
-      )
-    );
+      newEdge
+    )
+    newEdge.registerWithConnectedNodes()
   }
 
   spawnEdge(sourceNodeId) {
     const allIdsSet = new Set(this.nodes.keys());
     allIdsSet.delete(sourceNodeId);
-    const targetNodeId = randomChoice(Array.from(allIdsSet));
+    for(let [id,value] of this.nodes.entries()) {
+      if(value.role === NetworkNodeRole.VISUAL) {
+        allIdsSet.delete(id);
+      }
+    }
+    let targetNodeId = randomChoice(Array.from(allIdsSet));
+
     this.connectWithEdge(sourceNodeId, targetNodeId);
   }
 
@@ -80,6 +90,7 @@ export default class NetworkProcessor {
     // Using a buffer based approach is more accurate but more difficult to implement as well as doubling the memory requirement
     const numNodes = this.nodes.size;
     new MapUtil(this.nodes).forEachEntryFisherYates(([id, node]) => {
+      node.process(deltaTime)
       if (Math.random() < deltaTime * this.params.edgeSpawnRate / numNodes) {
         if (this.edges.size < this.params.maxEdges) {
           DebugConsole.log("Spawning new edge...");
