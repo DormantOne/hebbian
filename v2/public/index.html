@@ -187,26 +187,26 @@
               <div class="ParameterControl">
                 <label
                   >Firing Threshold
-                  <span class="katex">V_{f}</span> (unitless)</label
+                  <span class="katex">I_{f}</span> (1/s)</label
                 >
                 <aside>
-                  <p>The accrued value at which a neuron fires.</p>
+                  <p>The total simultaneous current from incoming edges at which a node fires.</p>
                 </aside>
-                <input type="number" id="firingThreshold" value="1.5" />
+                <input type="number" id="firingThreshold" value="2.0" />
               </div>
               <div class="ParameterControl">
                 <label
                   >Spike Activation Level
-                  <span class="katex">V_{s}</span> (unitless)</label
+                  <span class="katex">I_{s}</span> (1/s)</label
                 >
                 <aside>
-                  <p>The intensity of each spike that a node fires.</p>
                   <p>
-                    When a nodes total value exceed threshold
-                    <span class="katex">V_{t}</span> it fires a spike of value
-                    <span class="katex">V_{s}</span> which will later decay
-                    exponentially according to
-                    <span class="katex">\tau_{s}</span>
+                    The base amount of value per second transferred along an
+                    edge when a node fire. Here, value per second is likened to electric current.
+                  </p>
+                  <p>
+                    The amount (per second) decays exponentially overtime
+                    according to <span class="katex">\tau_s</span>
                   </p>
                 </aside>
                 <input type="number" id="spikeActivationLevel" value="1.0" />
@@ -222,7 +222,7 @@
                     decays overtime
                   </p>
                   <p class="katex">
-                    v(t)=V_s e^{-\frac{1}{\tau_s}(t-t_{spike})}
+                    i(t)=I_s e^{-\frac{1}{\tau_s}(t-t_{spike})}
                   </p>
                 </aside>
                 <input type="number" id="spikeDecayTimeConstant" value="0.5" />
@@ -360,7 +360,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                   The amount of consecutive time a node can spend inactive (no
                   spikes) before removal.
                 </aside>
-                <input type="number" id="nodeInactiveLifetime" value="0.5" />
+                <input type="number" id="nodeInactiveLifetime" value="5" />
               </div>
               <div class="ParameterControl">
                 <label>Edge Inactive Lifetime (s)</label>
@@ -369,7 +369,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                   spikes in either source or sink node) before removal.
                 </aside>
 
-                <input type="number" id="edgeInactiveLifetime" value="0.5" />
+                <input type="number" id="edgeInactiveLifetime" value="0.25" />
               </div>
               <div class="ParameterControl">
                 <label
@@ -382,7 +382,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                     The number of nodes, on average, that will spawn per second.
                   </p>
                 </aside>
-                <input type="number" id="nodeSpawnRate" value="0.2" />
+                <input type="number" id="nodeSpawnRate" value="0.5" />
               </div>
               <div class="ParameterControl">
                 <label
@@ -397,7 +397,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                   </p>
                 </aside>
 
-                <input type="number" id="edgeSpawnRate" value="0.5" />
+                <input type="number" id="edgeSpawnRate" value="10" />
               </div>
             </div>
           </div>

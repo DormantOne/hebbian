@@ -20,7 +20,8 @@ import { MapUtil } from "../utils/collections.js";
 import NetworkProcessor from "./NetworkProcessor.js";
 
 /**
- * @typedef {Object} SimulationParams
+ * @typedef  {Object} SimulationParams
+ * @property {"human" | "ai"} controlledBy - Controls the AI system ('human' or 'neural')
  * @property {number} playfieldWidth - Width of the playfield
  * @property {number} playfieldHeight - Height of the playfield
  * @property {number} icicleWidth - Width of icicles
@@ -79,6 +80,8 @@ export default class Simulation {
     this.fitnessPlotScale = new DynamicScale();
     this.fitnessHistory = new FixedSizeDeque(FITNESS_PLOT_NUM_FRAMES, 0);
     this.fitness = 0;
+    this.lastFitness = 0;
+    this.deltaFitness = 0;
   }
 
   getState() {
@@ -176,7 +179,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.brainNodes = new Map();
     this.brainEdges = new Map();
 
-
     for (let i = 0; i < params.numSensorRays; i++) {
       const theta =
         Math.PI / 2 +
@@ -192,6 +194,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
           this.networkNodeValueScale,
           this.brainNodes,
           this.brainEdges,
+          `sensor${i}`
         )
       );
     }
@@ -206,6 +209,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
         this.networkNodeValueScale,
         this.brainNodes,
         this.brainEdges,
+        "motorLeft",
         {
           visualScale: 3,
         }
@@ -220,12 +224,12 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
         this.networkNodeValueScale,
         this.brainNodes,
         this.brainEdges,
+        "motorRight",
         {
           visualScale: 3,
         }
       ),
     ];
-
 
     // Add references to visual and motor nodes to the brain under reserved ids
     for (let i = 0; i < this.sensorNodes.length; i++) {
@@ -235,16 +239,17 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.brainNodes.set("motorLeft", this.motorNodes[0]);
     this.brainNodes.set("motorRight", this.motorNodes[1]);
 
-
     this.networkProcessor = new NetworkProcessor(
       params,
       this.brainNodes,
       this.brainEdges,
       this.networkNodeValueScale,
       this.networkEdgeStrengthScale
-    )
+    );
 
     this.fitness = 0;
+    this.lastFitness = 0;
+    this.deltaFitness = 0;
     this.fitnessHistory.reset();
 
     // Bind the canvas resize function to the instance
@@ -284,6 +289,8 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     }
 
     this.controlledBy = controlledBy;
+
+    this.params.controlledBy = controlledBy;
 
     // Start the game loop
     requestAnimationFrame(this.__processFrame.bind(this));
@@ -336,7 +343,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     if (this.state === "running") {
       // Update game logic
-      this.networkProcessor.__update(deltaTime, this.fitness);
+      this.networkProcessor.__update(deltaTime, this.deltaFitness);
       this.__updateGame(deltaTime);
       // Render the game
       this.__renderGame();
@@ -401,7 +408,11 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     const nextFitness =
       this.fitness * (1 - this.params.fitnessDecayRatio * deltaTime);
 
+    this.lastFitness = this.fitness
+
     this.fitness = nextFitness;
+
+    this.deltaFitness = this.fitness - this.lastFitness;
 
     if (this.fitness < this.simMinFitness) {
       window.fitnessPlotBounds.perSim.low.set(this.fitness);
@@ -544,9 +555,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       const sensorNode = this.sensorNodes[i];
       const sensorDistance = this.sensorDistances[i];
       if (typeof sensorDistance === "number" || !isNaN(sensorDistance)) {
-        sensorNode.setValue(1 - sensorDistance / this.params.sensorMaxDistance);
+        sensorNode.autofireRate = (1 - sensorDistance / this.params.sensorMaxDistance)
       } else {
-        sensorNode.setValue(0);
+        sensorNode.autofireRate = null
       }
     }
   }
@@ -690,24 +701,26 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
   __renderVisualization() {
     this.networkNodeValueScale.clear();
-    const allNodeValues = Array.from(this.brainNodes
-      .values()
-      .map((node) => node.getValue()));
-    const allEdgeStrengths = Array.from(this.brainEdges.values()).map((edge) => edge.strength);
+    const allNodeValues = Array.from(
+      this.brainNodes.values().map((node) => node.getValue())
+    );
+    const allEdgeAbsoluteStrengths = Array.from(this.brainEdges.values()).map(
+      (edge) => Math.abs(edge.strength)
+    );
     this.networkNodeValueScale.compute(allNodeValues);
-    this.networkEdgeStrengthScale.compute(allEdgeStrengths);
+    this.networkEdgeStrengthScale.compute(allEdgeAbsoluteStrengths);
     const ctx = visCanvasUtils.getVisCtx();
     const [ctxWidth, ctxHeight] = [
       visCanvasUtils.getVisCanvasWidth(),
       visCanvasUtils.getVisCanvasHeight(),
     ];
     ctx.clearRect(0, 0, ctxWidth, ctxHeight);
-    new MapUtil(this.brainNodes).forEachEntryFisherYates(([, node]) => {
-      node.draw();
-    });
-    new MapUtil(this.brainEdges).forEachEntryFisherYates(([, edge]) => {
-      edge.draw();
-    });
+    for(const node of this.brainNodes.values()) {
+      node.draw(fitnessCanvasUtils.getFitnessCtx());
+    }
+    for(const edge of this.brainEdges.values()) {
+      edge.draw(fitnessCanvasUtils.getFitnessCtx());
+    }
   }
 
   __renderFitnessPlot() {

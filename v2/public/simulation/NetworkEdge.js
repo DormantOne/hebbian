@@ -1,6 +1,8 @@
 import { MapUtil } from "../utils/collections.js";
 import { visSettings } from "../visualization/constants.js";
 import { getVisCtx, VisCoord } from "../visualization/coordinates.js";
+import DebugConsole from "../ui/DebugConsole.js";
+import { NetworkNodeRole } from "./NetworkNode.js";
 
 /**
  * @typedef {import('./Simulation.js').SimulationParams} SimulationParams
@@ -24,16 +26,48 @@ export default class NetworkEdge {
     strength,
     simParams,
     nodes,
+    edges,
     edgeVisStrengthScale
   ) {
     this.sourceNodeId = sourceNodeId;
     this.targetNodeId = targetNodeId;
     this.strength = strength;
     this.simParams = simParams;
-    this.active = true;
-    this.remainingLifetime = simParams.edgeInactiveLifetime;
     this.nodes = nodes;
+    this.edges = edges;
     this.edgeVisStrengthScale = edgeVisStrengthScale;
+    this.lifetime = simParams.edgeInactiveLifetime;
+  }
+
+  constrainStrength() {
+    const minStrength = -this.simParams.maxAbsoluteEdgeStrength;
+    const maxStrength = this.simParams.maxAbsoluteEdgeStrength;
+    if(this.strength < minStrength) {
+      this.strength = minStrength;
+    }
+    if(this.strength > maxStrength) {
+      this.strength = maxStrength;
+    }
+  }
+
+  resetLifetime() {
+    this.lifetime = this.simParams.edgeInactiveLifetime;
+  }
+
+  die() {
+    DebugConsole.info(`Edge ${this.getId()} died`);
+    this.unregisterWithConnectedNodes();
+    this.sourceNodeId = null;
+    this.targetNodeId = null;
+    this.edges.delete(this.getId());
+    // Will be destroyed on next garbage collection
+  }
+
+  process(deltaTime) {
+    this.remainingLifetime -= deltaTime;
+    if (this.remainingLifetime <= 0) {
+      this.die();
+    }
   }
 
   getId() {
@@ -44,11 +78,17 @@ export default class NetworkEdge {
     if (this.sourceNodeId === null) {
       return null;
     }
+    if (!this.nodes.has(this.sourceNodeId)) {
+      return null;
+    }
     return new MapUtil(this.nodes).getOrThrow(this.sourceNodeId);
   }
 
   getTargetNode() {
     if (this.targetNodeId === null) {
+      return null;
+    }
+    if (!this.nodes.has(this.targetNodeId)) {
       return null;
     }
     return new MapUtil(this.nodes).getOrThrow(this.targetNodeId);
@@ -59,7 +99,19 @@ export default class NetworkEdge {
     this.getTargetNode().edgeIdCacheIn.add(this.getId());
   }
 
+  unregisterWithConnectedNodes() {
+    if (this.getSourceNode() !== null) {
+      this.getSourceNode().edgeIdCacheOut.delete(this.getId());
+    }
+    if (this.getTargetNode() !== null) {
+      this.getTargetNode().edgeIdCacheIn.delete(this.getId());
+    }
+  }
+
   draw() {
+    if (this.getSourceNode() === null || this.getTargetNode() === null) {
+      return;
+    }
     const [x1, y1] = VisCoord.pointToPixel(this.getSourceNode().visLoc);
     const [x2, y2] = VisCoord.pointToPixel(this.getTargetNode().visLoc);
     const thickness =
@@ -70,10 +122,31 @@ export default class NetworkEdge {
 
     const ctx = getVisCtx();
     ctx.lineWidth = thickness;
-    ctx.strokeStyle = "black";
+    ctx.strokeStyle =
+      this.strength === 0 ? "black" : this.strength < 0 ? "magenta" : "yellow";
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.stroke();
+  }
+
+  learn(deltaTime, deltaFitness) {
+    if (!this.getSourceNode() || !this.getTargetNode()) {
+      return;
+    }
+    if (this.getSourceNode().isFiring && this.getTargetNode().isFiring) {
+      const timeDelta =
+        this.getSourceNode().lastFire - this.getTargetNode().lastFire;
+      const proximityFactor = Math.exp(
+        Math.pow(
+          -timeDelta / this.simParams.hebbianReinforcementTimeConstant,
+          2
+        )
+      )
+      const sign = Math.sign(this.strength)
+      this.strength += sign * deltaFitness * proximityFactor * deltaTime
+      this.constrainStrength()
+
+    }
   }
 }

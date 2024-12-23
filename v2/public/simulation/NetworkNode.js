@@ -1,6 +1,7 @@
 import { visSettings } from "../visualization/constants.js";
 import { getVisCtx, VisCoord } from "../visualization/coordinates.js";
 import { MapUtil } from "../utils/collections.js";
+import DebugConsole from "../ui/DebugConsole.js";
 
 /**
  * @typedef {import('./Simulation').SimulationParams} SimulationParams
@@ -38,7 +39,17 @@ export default class NetworkNode {
    * computed from the values of all neurons
    * in the simulation (including the current)
    */
-  constructor(role, visLoc, simParams, valueScale, simNodes, simEdges, options ) {
+  constructor(
+    role,
+    visLoc,
+    simParams,
+    valueScale,
+    simNodes,
+    simEdges,
+    id,
+    options
+  ) {
+    this.id = id;
     this.role = role;
     this.visLoc = visLoc;
     this.value = 0;
@@ -71,7 +82,6 @@ export default class NetworkNode {
 
     this.refractoryTimer = 0;
 
-
     this.lastFire = null;
 
     this.isFiring = false;
@@ -79,53 +89,114 @@ export default class NetworkNode {
     this.simNodes = simNodes;
 
     this.simEdges = simEdges;
+
+    this.lifetime = this.simParams.nodeInactiveLifetime;
+
+    this.autofireRate = null;
   }
 
   computeOutputLevel() {
-    if(this.isFiring){
-      if(this.lastFire){
-        return Math.exp(-this.simParams.spikeActivationLevel / this.simParams.spikeDecayTimeConstant)
+    if (this.isFiring) {
+      if (this.lastFire) {
+        return Math.exp(
+          -this.simParams.spikeActivationLevel /
+            this.simParams.spikeDecayTimeConstant
+        );
       }
     }
-    return 0
+    return 0;
+  }
+
+  die() {
+    DebugConsole.info(`Node ${this.id} died`);
+    for (let edgeId of this.edgeIdCacheIn) {
+      const edge = new MapUtil(this.simEdges).getOrThrow(edgeId);
+      edge.die();
+    }
+    for (let edgeId of this.edgeIdCacheOut) {
+      const edge = new MapUtil(this.simEdges).getOrThrow(edgeId);
+      edge.die();
+    }
+    this.simNodes.delete(this.id);
   }
 
   process(deltaTime) {
-    this.refractoryTimer -= deltaTime;
-    if (this.refractoryTimer < 0) {
-      this.refractoryTimer = 0;
+    if (this.role === NetworkNodeRole.NORMAL) {
+      this.lifetime -= deltaTime;
+    }
+    if (this.lifetime <= 0) {
+      this.die();
     }
 
-    if(this.role === NetworkNodeRole.NORMAL) {
-      if (this.isFiring) {
-        const now = performance.now() / 1000;
-        if (
-          this.lastFire &&
-          now - this.lastFire >= 5 * this.simParams.spikeDecayTimeConstant
-        ) {
+    if (this.role === NetworkNodeRole.VISUAL) {
+      if (this.autofireRate) {
+        if (Math.random() < this.autofireRate) {
+          this.value=this.simParams.spikeActivationLevel
+          this.isFiring = true;
+          this.lastFire = performance.now() / 1000;
+        } else {
           this.isFiring = false;
+          this.lastFire = null;
+          this.value = 0;
         }
+      }else{
+        this.value = 0
       }
-  
-  
-  
-      if(this.isFiring){
-        for(let edgeId of this.edgeIdCacheOut){
-          const edge = new MapUtil(this.simEdges).getOrThrow(edgeId);
-          const edgeTarget = edge.getTargetNode();
-          edgeTarget.stimulate(this.computeOutputLevel()*edge.strength)
+    } else {
+      if (this.value >= this.simParams.firingThreshold *deltaTime) {
+        if (this.refractoryTimer <= 0) {
+          this.lastFire = performance.now() / 1000;
+          this.isFiring = true;
         }
       }
     }
-    if(this.role === NetworkNodeRole.VISUAL) {
-      for(let edgeId of this.edgeIdCacheOut){
+    if (this.isFiring) {
+      this.refractoryTimer -= deltaTime;
+      if (this.refractoryTimer < 0) {
+        this.refractoryTimer = 0;
+      }
+    }
+    if (this.isFiring) {
+      for (let edgeId of this.edgeIdCacheOut) {
         const edge = new MapUtil(this.simEdges).getOrThrow(edgeId);
         const edgeTarget = edge.getTargetNode();
-        edgeTarget.stimulate(this.value*edge.strength) 
+        edgeTarget.stimulate(
+          this.computeOutputLevel() * edge.strength * deltaTime
+        );
       }
-      
     }
+    if (this.isFiring) {
+      this.lifetime = this.simParams.nodeInactiveLifetime;
+      for (let edgeId of this.edgeIdCacheIn) {
+        const edge = new MapUtil(this.simEdges).getOrThrow(edgeId);
+        edge.resetLifetime();
+      }
+      for (let edgeId of this.edgeIdCacheOut) {
+        const edge = new MapUtil(this.simEdges).getOrThrow(edgeId);
+        edge.resetLifetime();
+      }
+    }
+    if (this.isFiring) {
+      const now = performance.now() / 1000;
+      if (
+        this.lastFire &&
+        now - this.lastFire >= 5 * this.simParams.spikeDecayTimeConstant
+      ) {
+        this.isFiring = false;
+        this.lastFire = null;
+      }
+    }
+  }
 
+  constrainValue() {
+    const minValue = -this.simParams.maxAbsoluteNodeValue;
+    const maxValue = -minValue;
+    this.value =
+      this.value > maxValue
+        ? maxValue
+        : this.value < minValue
+        ? minValue
+        : this.value;
   }
 
   /**
@@ -134,6 +205,7 @@ export default class NetworkNode {
    */
   setValue(value) {
     this.value = value;
+    this.constrainValue();
     return this;
   }
 
@@ -143,23 +215,7 @@ export default class NetworkNode {
 
   stimulate(value) {
     this.value += value;
-    if (this.value >= this.simParams.firingThreshold) {
-      this.tryFire();
-    }
-  }
-
-  tryFire() {
-    if (this.refractoryTimer > 0) {
-      return;
-    }
-    // Remember, even if it is already firing it can fire again
-    // As long as it is not during the refractory period
-    // When it fires again we need to reset the decay time
-    // Be registering a new value for lastFire
-    this.value = 0;
-    this.outputLevel = this.simParams.spikeActivationLevel;
-    this.lastFire = performance.now() / 1000;
-    this.isFiring = true;
+    this.constrainValue();
   }
 
   draw() {
