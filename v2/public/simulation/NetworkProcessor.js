@@ -29,18 +29,19 @@ export default class NetworkProcessor {
   }
 
   spawnNode() {
-    if (this.nodes.size >= this.params.maxNodes) {
-      return;
-    }
-    const [ncExtentW, ncExtentH] = VisCoord.getNCExtent();
-    const smallerNCExtent = Math.min(ncExtentW, ncExtentH);
-
     const k = new MapUtil(this.nodes).randomUniqueKey();
+    const safeXmin = -0.9;
+    const safeXmax = 0.9;
+    const safeYmin = -0.7;
+    const safeYmax =
+      -0.1 +
+      Math.sin(Math.PI / 2 - ((this.params.sensorFOV / 2) * Math.PI) / 180) *
+        0.85;
     const newNode = new NetworkNode(
       NetworkNodeRole.NORMAL,
       [
-        randomUniformInclusive(-1, 1) * smallerNCExtent,
-        randomUniformInclusive(-1, 1) * smallerNCExtent,
+        randomUniformInclusive(safeXmin, safeXmax),
+        randomUniformInclusive(safeYmin, safeYmax),
       ],
       this.params,
       this.nodeVisValueScale,
@@ -74,6 +75,7 @@ export default class NetworkProcessor {
   }
 
   spawnEdge() {
+    const edgeExcToInhSpawnRatio = this.params.edgeExcToInhSpawnRatio;
     const validSources = new Set(this.nodes.keys());
     const validTargets = new Set(this.nodes.keys());
     for (let [id, node] of this.nodes.entries()) {
@@ -90,18 +92,24 @@ export default class NetworkProcessor {
       }
     }
 
-    if (validSources.size === 0 || validTargets.size <= 2) {
-      DebugConsole.info("Need at least one valid source choice and at least 3 valid target node choice to spawn edge.");
-      return
+    if (
+      validSources.size === 0 ||
+      validTargets.size <= this.params.numMotorNodes * 2
+    ) {
+      DebugConsole.info(
+        "Need at least one valid source choice and at least 3 valid target node choice to spawn edge."
+      );
+      return;
     }
 
     let sourceNodeId = randomChoice(Array.from(validSources));
     let targetNodeId = randomChoice(Array.from(validTargets));
 
-    while(sourceNodeId === targetNodeId || (
-      this.nodes.get(sourceNodeId).role === NetworkNodeRole.VISUAL &&
-      this.nodes.get(targetNodeId).role === NetworkNodeRole.MOVEMENT
-    )) {
+    while (
+      sourceNodeId === targetNodeId ||
+      (this.nodes.get(sourceNodeId).role === NetworkNodeRole.VISUAL &&
+        this.nodes.get(targetNodeId).role === NetworkNodeRole.MOVEMENT)
+    ) {
       sourceNodeId = randomChoice(Array.from(validSources));
       targetNodeId = randomChoice(Array.from(validTargets));
     }
@@ -109,7 +117,7 @@ export default class NetworkProcessor {
     this.connectWithEdge(
       sourceNodeId,
       targetNodeId,
-      randomUniformInclusive(-1, 1)
+      Math.random() < edgeExcToInhSpawnRatio ? 1 : -1
     );
   }
 
@@ -144,11 +152,35 @@ export default class NetworkProcessor {
       }
     }
 
-    if (Math.random() < deltaTime * this.params.nodeSpawnRate) {
+    const rSpawnNode =
+      deltaTime *
+      this.params.nodeSpawnRate *
+      (1 -
+        Math.exp(
+          -(
+            ((this.nodes.size - this.params.targetNodeCount) /
+              this.params.targetNodeCount) **
+            2
+          )
+        ));
+
+    if (Math.random() < rSpawnNode) {
       this.spawnNode();
     }
 
-    if (Math.random() < deltaTime * this.params.edgeSpawnRate) {
+    const rSpawnEdge =
+      deltaTime *
+      this.params.edgeSpawnRate *
+      (1 -
+        Math.exp(
+          -(
+            ((this.edges.size - this.params.targetEdgeCount) /
+              this.params.targetEdgeCount) **
+            2
+          )
+        ));
+
+    if (Math.random() < rSpawnEdge) {
       this.spawnEdge();
     }
 

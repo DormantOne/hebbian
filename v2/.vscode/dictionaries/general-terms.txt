@@ -1,2 +1,3 @@
+autofire
 Playfield
 Respawning

@@ -154,12 +154,16 @@
                 <input type="number" id="sensorMaxDistance" value="20" />
               </div>
               <div class="ParameterControl">
-                <label>Max Nodes (Includes sensor and motor nodes.)</label>
-                <input type="number" id="maxNodes" value="250" />
+                <label>Num Motor Nodes</label>
+                <input type="number" id="numMotorNodes" value="3" />
               </div>
               <div class="ParameterControl">
-                <label>Max Edges (Edges are unidirectional.)</label>
-                <input type="number" id="maxEdges" value="1000" />
+                <label>Target Node Count (Includes sensor and motor nodes.)</label>
+                <input type="number" id="targetNodeCount" value="50" />
+              </div>
+              <div class="ParameterControl">
+                <label>Target Edge Count (Edges are unidirectional.)</label>
+                <input type="number" id="targetEdgeCount" value="300" />
               </div>
               <div class="ParameterControl">
                 <label>Max Absolute Node Value</label>
@@ -192,7 +196,7 @@
                 <aside>
                   <p>The total simultaneous current from incoming edges at which a node fires.</p>
                 </aside>
-                <input type="number" id="firingThreshold" value="2.0" />
+                <input type="number" id="firingThreshold" value="3" />
               </div>
               <div class="ParameterControl">
                 <label
@@ -209,7 +213,7 @@
                     according to <span class="katex">\tau_s</span>
                   </p>
                 </aside>
-                <input type="number" id="spikeActivationLevel" value="1.0" />
+                <input type="number" id="spikeActivationLevel" value="1" />
               </div>
               <div class="ParameterControl">
                 <label
@@ -225,7 +229,7 @@
                     i(t)=I_s e^{-\frac{1}{\tau_s}(t-t_{spike})}
                   </p>
                 </aside>
-                <input type="number" id="spikeDecayTimeConstant" value="0.5" />
+                <input type="number" id="spikeDecayTimeConstant" value="0.1" />
               </div>
               <div class="ParameterControl">
                 <label
@@ -239,7 +243,7 @@
                     <span class="katex">V_{t}</span> is exceeded
                   </p>
                 </aside>
-                <input type="number" id="spikeRefractoryPeriod" value="0.05" />
+                <input type="number" id="spikeRefractoryPeriod" value="0.1" />
               </div>
               <div class="ParameterControl">
                 <label
@@ -265,7 +269,7 @@
                     (instantaneously) on death
                   </p>
                 </aside>
-                <input type="number" id="deathPunishment" value="10" />
+                <input type="number" id="deathPunishment" value="5" />
               </div>
               <div class="ParameterControl">
                 <label
@@ -332,7 +336,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                 <input
                   type="number"
                   id="hebbianReinforcementTimeConstant"
-                  value="0.01"
+                  value="0.1"
                 />
               </div>
               <div class="ParameterControl">
@@ -352,7 +356,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                     e^{-\frac{1}{\tau_h^2}(t_{source}-t_{sink})^2}
                   </p>
                 </aside>
-                <input type="number" id="hebbianStrengthFactor" value="0.1" />
+                <input type="number" id="hebbianStrengthFactor" value="10" />
               </div>
               <div class="ParameterControl">
                 <label>Node Inactive Lifetime (s)</label>
@@ -360,7 +364,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                   The amount of consecutive time a node can spend inactive (no
                   spikes) before removal.
                 </aside>
-                <input type="number" id="nodeInactiveLifetime" value="5" />
+                <input type="number" id="nodeInactiveLifetime" value="3" />
               </div>
               <div class="ParameterControl">
                 <label>Edge Inactive Lifetime (s)</label>
@@ -369,7 +373,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                   spikes in either source or sink node) before removal.
                 </aside>
 
-                <input type="number" id="edgeInactiveLifetime" value="0.25" />
+                <input type="number" id="edgeInactiveLifetime" value="1" />
               </div>
               <div class="ParameterControl">
                 <label
@@ -382,7 +386,7 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                     The number of nodes, on average, that will spawn per second.
                   </p>
                 </aside>
-                <input type="number" id="nodeSpawnRate" value="0.5" />
+                <input type="number" id="nodeSpawnRate" value="5" />
               </div>
               <div class="ParameterControl">
                 <label
@@ -397,7 +401,21 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
                   </p>
                 </aside>
 
-                <input type="number" id="edgeSpawnRate" value="10" />
+                <input type="number" id="edgeSpawnRate" value="20" />
+              </div>
+              <div class="ParameterControl">
+                <label
+                  >Edge Excitatory/Inhibitory Spawn Ratio
+                  <span class="katex">r_{s_{e}}</span>
+                  (1/s)</label
+                >
+                <aside>
+                  <p>
+                    The fraction of all spawned edges that start with strength +1 as opposed to -1
+                  </p>
+                </aside>
+
+                <input type="number" id="edgeExcToInhSpawnRatio" value="0.75" />
               </div>
             </div>
           </div>

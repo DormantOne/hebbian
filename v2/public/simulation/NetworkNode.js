@@ -131,19 +131,15 @@ export default class NetworkNode {
     if (this.role === NetworkNodeRole.VISUAL) {
       if (this.autofireRate) {
         if (Math.random() < this.autofireRate) {
-          this.value=this.simParams.spikeActivationLevel
           this.isFiring = true;
           this.lastFire = performance.now() / 1000;
         } else {
           this.isFiring = false;
           this.lastFire = null;
-          this.value = 0;
         }
-      }else{
-        this.value = 0
       }
     } else {
-      if (this.value >= this.simParams.firingThreshold *deltaTime) {
+      if (this.value >= this.simParams.firingThreshold * deltaTime) {
         if (this.refractoryTimer <= 0) {
           this.lastFire = performance.now() / 1000;
           this.isFiring = true;
@@ -222,18 +218,38 @@ export default class NetworkNode {
     const ctx = getVisCtx();
     const radiusPixels =
       VisCoord.distToPixel(nnVisSettings.radius) * this.options.visualScale;
-    const color = this.valueScale.interpolateLevelColor(
-      this.value,
-      [0, 0, 255],
-      [255, 0, 0],
-      [128, 128, 128]
-    );
+    const color =
+      this.role !== NetworkNodeRole.VISUAL
+        ? this.valueScale.interpolateLevelColor(
+            this.value,
+            [0, 0, 255],
+            [255, 0, 0],
+            [128, 128, 128]
+          )
+        : visSettings.networkNode.firingBorderColor;
     const locPixels = VisCoord.pointToPixel(this.visLoc);
 
     ctx.beginPath();
     ctx.arc(locPixels[0], locPixels[1], radiusPixels, 0, Math.PI * 2);
-    ctx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]})`;
-    ctx.fill();
+    ctx.fillStyle =
+      this.role !== NetworkNodeRole.VISUAL
+        ? `rgb(${color[0]},${color[1]},${color[2]})`
+        : color;
+    ctx.strokeStyle = this.isFiring
+      ? visSettings.networkNode.firingBorderColor
+      : "none";
+    ctx.lineWidth = this.isFiring
+      ? visSettings.networkNode.firingBorderThickness *
+        Math.exp(
+          -(performance.now() / 1000 - this.lastFire) /
+            this.simParams.spikeDecayTimeConstant
+        )
+      : 0;
     ctx.closePath();
+
+    if (this.isFiring) {
+      ctx.stroke();
+    }
+    ctx.fill();
   }
 }

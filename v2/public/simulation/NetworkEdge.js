@@ -42,10 +42,10 @@ export default class NetworkEdge {
   constrainStrength() {
     const minStrength = -this.simParams.maxAbsoluteEdgeStrength;
     const maxStrength = this.simParams.maxAbsoluteEdgeStrength;
-    if(this.strength < minStrength) {
+    if (this.strength < minStrength) {
       this.strength = minStrength;
     }
-    if(this.strength > maxStrength) {
+    if (this.strength > maxStrength) {
       this.strength = maxStrength;
     }
   }
@@ -123,7 +123,11 @@ export default class NetworkEdge {
     const ctx = getVisCtx();
     ctx.lineWidth = thickness;
     ctx.strokeStyle =
-      this.strength === 0 ? "black" : this.strength < 0 ? "magenta" : "yellow";
+      this.strength === 0
+        ? "black"
+        : this.strength < 0
+        ? networkEdgeVisSettings.inhibitoryColor
+        : networkEdgeVisSettings.excitatoryColor;
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
@@ -142,11 +146,10 @@ export default class NetworkEdge {
           -timeDelta / this.simParams.hebbianReinforcementTimeConstant,
           2
         )
-      )
-      const sign = Math.sign(this.strength)
-      this.strength += sign * deltaFitness * proximityFactor * deltaTime
-      this.constrainStrength()
-
+      );
+      const sign = Math.sign(this.strength);
+      this.strength += sign * deltaFitness * proximityFactor * deltaTime;
+      this.constrainStrength();
     }
   }
 }

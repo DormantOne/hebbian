@@ -32,8 +32,9 @@ import NetworkProcessor from "./NetworkProcessor.js";
  * @property {number} numSensorRays - Number of sensor rays
  * @property {number} sensorFOV - Field of view for sensors
  * @property {number} sensorMaxDistance - Maximum distance for sensors
- * @property {number} maxNodes - Maximum number of nodes
- * @property {number} maxEdges - Maximum number of edges
+ * @property {number} numMotorNodes - Number of motor nodes per side
+ * @property {number} targetNodeCount - 
+ * @property {number} targetEdgeCount - 
  * @property {number} maxAbsoluteNodeValue - Maximum absolute value for nodes
  * @property {number} maxAbsoluteEdgeStrength - Maximum absolute strength for edges
  * @property {number} firingThreshold - The accrued value at which a node fires
@@ -50,6 +51,7 @@ import NetworkProcessor from "./NetworkProcessor.js";
  * @property {number} edgeInactiveLifetime - Lifetime for inactive edges
  * @property {number} nodeSpawnRate - Spawn rate for nodes
  * @property {number} edgeSpawnRate - Spawn rate for edges
+ * @property {number} edgeExcToInhSpawnRatio - The fraction of all edges spawned that start with strength +1 as opposed to -1
  */
 
 /**
@@ -110,8 +112,9 @@ export default class Simulation {
         "numSensorRays",
         "sensorFOV",
         "sensorMaxDistance",
-        "maxNodes",
-        "maxEdges",
+        "numMotorNodes",
+        "targetNodeCount",
+        "targetEdgeCount",
         "maxAbsoluteNodeValue",
         "maxAbsoluteEdgeStrength",
 
@@ -130,6 +133,7 @@ export default class Simulation {
         "edgeInactiveLifetime",
         "nodeSpawnRate",
         "edgeSpawnRate",
+        "edgeExcToInhSpawnRatio",
       ].map((id) => {
         return [id, getNumberParamById(id, paramErrorMessages)];
       })
@@ -194,50 +198,102 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
           this.networkNodeValueScale,
           this.brainNodes,
           this.brainEdges,
-          `sensor${i}`
+          `sensor${i}`,
+          {
+            visualScale: 2/5,
+          }
         )
       );
     }
-    this.motorNodes = [
-      new NetworkNode(
+    // this.motorNodes = [
+    //   new NetworkNode(
+    //     NetworkNodeRole.MOVEMENT,
+    //     [
+    //       -0.85 * Math.cos(((90 - this.params.sensorFOV / 2) * Math.PI) / 180),
+    //       0,
+    //     ],
+    //     this.params,
+    //     this.networkNodeValueScale,
+    //     this.brainNodes,
+    //     this.brainEdges,
+    //     "motorLeft",
+    //     {
+    //       visualScale: 3,
+    //     }
+    //   ),
+    //   new NetworkNode(
+    //     NetworkNodeRole.MOVEMENT,
+    //     [
+    //       0.85 * Math.cos(((90 - this.params.sensorFOV / 2) * Math.PI) / 180),
+    //       0,
+    //     ],
+    //     this.params,
+    //     this.networkNodeValueScale,
+    //     this.brainNodes,
+    //     this.brainEdges,
+    //     "motorRight",
+    //     {
+    //       visualScale: 3,
+    //     }
+    //   ),
+    // ];
+
+    this.motorNodes = [];
+
+    for (let i = 0; i < params.numMotorNodes; i++) {
+      const r = (0.8 * i) / (params.numMotorNodes - 1);
+      const x = -0.1 - r;
+      const y = -0.8;
+      const node = new NetworkNode(
         NetworkNodeRole.MOVEMENT,
-        [
-          -0.85 * Math.cos(((90 - this.params.sensorFOV / 2) * Math.PI) / 180),
-          0,
-        ],
+        [x, y],
         this.params,
         this.networkNodeValueScale,
         this.brainNodes,
         this.brainEdges,
-        "motorLeft",
+        `motorLeft${i}`,
         {
-          visualScale: 3,
+          visualScale: 2,
         }
-      ),
-      new NetworkNode(
+      );
+      this.motorNodes.push(node);
+    }
+
+    for (let i = 0; i < params.numMotorNodes; i++) {
+      const r = (0.8 * i) / (params.numMotorNodes - 1);
+      const x = 0.1 + r;
+      const y = -0.8;
+      const node = new NetworkNode(
         NetworkNodeRole.MOVEMENT,
-        [
-          0.85 * Math.cos(((90 - this.params.sensorFOV / 2) * Math.PI) / 180),
-          0,
-        ],
+        [x, y],
         this.params,
         this.networkNodeValueScale,
         this.brainNodes,
         this.brainEdges,
-        "motorRight",
+        `motorRight${i}`,
         {
-          visualScale: 3,
+          visualScale: 2,
         }
-      ),
-    ];
+      );
+      this.motorNodes.push(node);
+    }
 
     // Add references to visual and motor nodes to the brain under reserved ids
     for (let i = 0; i < this.sensorNodes.length; i++) {
       this.brainNodes.set(`sensor${i}`, this.sensorNodes[i]);
     }
 
-    this.brainNodes.set("motorLeft", this.motorNodes[0]);
-    this.brainNodes.set("motorRight", this.motorNodes[1]);
+    // this.brainNodes.set("motorLeft", this.motorNodes[0]);
+    // this.brainNodes.set("motorRight", this.motorNodes[1]);
+
+    for (let i = 0; i < this.params.numMotorNodes; i++) {
+      const idLeft = `motorLeft${i}`;
+      const nodeLeft = this.motorNodes[i];
+      const idRight = `motorRight${i}`;
+      const nodeRight = this.motorNodes[i + this.params.numMotorNodes];
+      this.brainNodes.set(idLeft, nodeLeft);
+      this.brainNodes.set(idRight, nodeRight);
+    }
 
     this.networkProcessor = new NetworkProcessor(
       params,
@@ -408,7 +464,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     const nextFitness =
       this.fitness * (1 - this.params.fitnessDecayRatio * deltaTime);
 
-    this.lastFitness = this.fitness
+    this.lastFitness = this.fitness;
 
     this.fitness = nextFitness;
 
@@ -444,26 +500,36 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     const speed = this.player.speed;
     let dx = 0;
 
-    const leftMotor = this.motorNodes[0];
-    const rightMotor = this.motorNodes[1];
+    const leftMotors = this.motorNodes.slice(0, this.params.numMotorNodes);
+    const rightMotors = this.motorNodes.slice(this.params.numMotorNodes);
 
     if (this.controlledBy === "human") {
-      leftMotor.setValue(0);
-      rightMotor.setValue(0);
-
-      if (this.keyState["ArrowLeft"] || this.keyState["KeyA"]) {
-        leftMotor.setValue(1);
-        rightMotor.setValue(0);
+      for (const motor of leftMotors) {
+        if (this.keyState["ArrowLeft"] || this.keyState["KeyA"]) {
+          motor.setValue(1);
+        } else {
+          motor.setValue(0);
+        }
       }
-      if (this.keyState["ArrowRight"] || this.keyState["KeyD"]) {
-        leftMotor.setValue(0);
-        rightMotor.setValue(1);
+      for (const motor of rightMotors) {
+        if (this.keyState["ArrowRight"] || this.keyState["KeyD"]) {
+          motor.setValue(1);
+        } else {
+          motor.setValue(0);
+        }
       }
     }
 
     const spikeActivationLevel = this.params.spikeActivationLevel;
 
-    const differential = rightMotor.getValue() - leftMotor.getValue();
+    const leftValues = leftMotors.map((motor) => motor.getValue());
+    const leftMeanValue =
+      leftValues.reduce((a, b) => a + b, 0) / leftValues.length;
+    const rightValues = rightMotors.map((motor) => motor.getValue());
+    const rightMeanValue =
+      rightValues.reduce((a, b) => a + b, 0) / rightValues.length;
+
+    const differential = rightMeanValue - leftMeanValue;
 
     dx = (differential / spikeActivationLevel) * speed * deltaTime;
 
@@ -555,9 +621,10 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       const sensorNode = this.sensorNodes[i];
       const sensorDistance = this.sensorDistances[i];
       if (typeof sensorDistance === "number" || !isNaN(sensorDistance)) {
-        sensorNode.autofireRate = (1 - sensorDistance / this.params.sensorMaxDistance)
+        sensorNode.autofireRate =
+          1 - sensorDistance / this.params.sensorMaxDistance;
       } else {
-        sensorNode.autofireRate = null
+        sensorNode.autofireRate = null;
       }
     }
   }
@@ -715,11 +782,32 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       visCanvasUtils.getVisCanvasHeight(),
     ];
     ctx.clearRect(0, 0, ctxWidth, ctxHeight);
-    for(const node of this.brainNodes.values()) {
-      node.draw(fitnessCanvasUtils.getFitnessCtx());
-    }
-    for(const edge of this.brainEdges.values()) {
+    const safeXmin = -0.9;
+    const safeXmax = 0.9;
+    const safeYmin = -0.7;
+    const safeYmax =
+      -0.1 +
+      Math.sin(Math.PI / 2 - ((this.params.sensorFOV / 2) * Math.PI) / 180) *
+        0.85;
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    const safeTlc = [safeXmin, safeYmin];
+    const safeBrc = [safeXmax, safeYmax];
+    const safeTlcPx = visCanvasUtils.VisCoord.pointToPixel(safeTlc)
+    const safeBrcPx = visCanvasUtils.VisCoord.pointToPixel(safeBrc);
+    ctx.rect(
+      safeTlcPx[0],
+      safeTlcPx[1],
+      safeBrcPx[0] - safeTlcPx[0],
+      safeBrcPx[1] - safeTlcPx[1]
+    )
+    ctx.stroke();
+
+    for (const edge of this.brainEdges.values()) {
       edge.draw(fitnessCanvasUtils.getFitnessCtx());
+    }
+    for (const node of this.brainNodes.values()) {
+      node.draw(fitnessCanvasUtils.getFitnessCtx());
     }
   }
 
