@@ -2,6 +2,8 @@ import { visSettings } from "../visualization/constants.js";
 import { getVisCtx, VisCoord } from "../visualization/coordinates.js";
 import { MapUtil } from "../utils/collections.js";
 import DebugConsole from "../ui/DebugConsole.js";
+import { formatRGBACss, interpolateRGBA } from "../visualization/color.js";
+import { clamp } from "../math/numeric.js";
 
 /**
  * @typedef {import('./Simulation').SimulationParams} SimulationParams
@@ -218,38 +220,61 @@ export default class NetworkNode {
     const ctx = getVisCtx();
     const radiusPixels =
       VisCoord.distToPixel(nnVisSettings.radius) * this.options.visualScale;
-    const color =
-      this.role !== NetworkNodeRole.VISUAL
-        ? this.valueScale.interpolateLevelColor(
-            this.value,
-            [0, 0, 255],
-            [255, 0, 0],
-            [128, 128, 128]
-          )
-        : visSettings.networkNode.firingBorderColor;
+    // const color =
+    //   this.role !== NetworkNodeRole.VISUAL
+    //     ? this.valueScale.interpolateLevelColor(
+    //         this.value,
+    //         [0, 0, 255],
+    //         [255, 0, 0],
+    //         [128, 128, 128]
+    //       )
+    //     : visSettings.networkNode.firingBorderColor;
+    let fillColor = null;
+    let strokeColor = null;
+    let strokeWidth = null;
+
+    if (this.role === NetworkNodeRole.VISUAL) {
+      fillColor = formatRGBACss(
+        interpolateRGBA(
+          clamp(1 - this.value / this.simParams.threatBonusProximity, 0, 1),
+          [127, 127, 127, 1],
+          [255, 0, 0, 1]
+        )
+      );
+    } else {
+      fillColor = this.valueScale.interpolateLevelColor(
+        this.value,
+        [0, 0, 255],
+        [255, 0, 0],
+        [128, 128, 128]
+      );
+    }
+
+    if (this.isFiring) {
+      strokeColor = visSettings.networkNode.firingBorderColor;
+      strokeWidth =
+        visSettings.networkNode.firingBorderThickness *
+        Math.exp(
+          -(performance.now() / 1000 - this.lastFire) /
+            this.simParams.spikeDecayTimeConstant
+        );
+    }
+
     const locPixels = VisCoord.pointToPixel(this.visLoc);
 
     ctx.beginPath();
     ctx.arc(locPixels[0], locPixels[1], radiusPixels, 0, Math.PI * 2);
-    ctx.fillStyle =
-      this.role !== NetworkNodeRole.VISUAL
-        ? `rgb(${color[0]},${color[1]},${color[2]})`
-        : color;
-    ctx.strokeStyle = this.isFiring
-      ? visSettings.networkNode.firingBorderColor
-      : "none";
-    ctx.lineWidth = this.isFiring
-      ? visSettings.networkNode.firingBorderThickness *
-        Math.exp(
-          -(performance.now() / 1000 - this.lastFire) /
-            this.simParams.spikeDecayTimeConstant
-        )
-      : 0;
     ctx.closePath();
 
-    if (this.isFiring) {
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = strokeColor;
+    if (strokeWidth) {
+      ctx.lineWidth = strokeWidth;
+    }
+    if (strokeColor && strokeWidth) {
       ctx.stroke();
     }
     ctx.fill();
+    // ctx.reset();
   }
 }

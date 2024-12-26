@@ -623,8 +623,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       if (typeof sensorDistance === "number" || !isNaN(sensorDistance)) {
         sensorNode.autofireRate =
           1 - sensorDistance / this.params.sensorMaxDistance;
-          // sensor.value =
-          // todo
+          sensorNode.value = 1-(sensorDistance)/this.params.sensorMaxDistance;
       } else {
         sensorNode.autofireRate = null;
         sensorNode.value = 0;
@@ -803,12 +802,14 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     const safeBrc = [safeXmax, safeYmax];
     const safeTlcPx = visCanvasUtils.VisCoord.pointToPixel(safeTlc);
     const safeBrcPx = visCanvasUtils.VisCoord.pointToPixel(safeBrc);
+    ctx.beginPath()
     ctx.rect(
       safeTlcPx[0],
       safeTlcPx[1],
       safeBrcPx[0] - safeTlcPx[0],
       safeBrcPx[1] - safeTlcPx[1]
     );
+    ctx.closePath()
     ctx.stroke();
 
     for (const edge of this.brainEdges.values()) {
