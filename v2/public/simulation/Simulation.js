@@ -33,8 +33,8 @@ import NetworkProcessor from "./NetworkProcessor.js";
  * @property {number} sensorFOV - Field of view for sensors
  * @property {number} sensorMaxDistance - Maximum distance for sensors
  * @property {number} numMotorNodes - Number of motor nodes per side
- * @property {number} targetNodeCount - 
- * @property {number} targetEdgeCount - 
+ * @property {number} targetNodeCount -
+ * @property {number} targetEdgeCount -
  * @property {number} maxAbsoluteNodeValue - Maximum absolute value for nodes
  * @property {number} maxAbsoluteEdgeStrength - Maximum absolute strength for edges
  * @property {number} firingThreshold - The accrued value at which a node fires
@@ -200,7 +200,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
           this.brainEdges,
           `sensor${i}`,
           {
-            visualScale: 2/5,
+            visualScale: 2 / 5,
           }
         )
       );
@@ -623,8 +623,11 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       if (typeof sensorDistance === "number" || !isNaN(sensorDistance)) {
         sensorNode.autofireRate =
           1 - sensorDistance / this.params.sensorMaxDistance;
+          // sensor.value =
+          // todo
       } else {
         sensorNode.autofireRate = null;
+        sensorNode.value = 0;
       }
     }
   }
@@ -768,9 +771,14 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
   __renderVisualization() {
     this.networkNodeValueScale.clear();
-    const allNodeValues = Array.from(
-      this.brainNodes.values().map((node) => node.getValue())
-    );
+    // const allNodeValues = Array.from(
+    //   this.brainNodes.values().map((node) => node.getValue())
+    // );
+    const allNodeValues = this.brainNodes
+      .values()
+      .filter((node) => node.role !== NetworkNodeRole.VISUAL)
+      .map((node) => node.getValue());
+
     const allEdgeAbsoluteStrengths = Array.from(this.brainEdges.values()).map(
       (edge) => Math.abs(edge.strength)
     );
@@ -793,14 +801,14 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     ctx.lineWidth = 2;
     const safeTlc = [safeXmin, safeYmin];
     const safeBrc = [safeXmax, safeYmax];
-    const safeTlcPx = visCanvasUtils.VisCoord.pointToPixel(safeTlc)
+    const safeTlcPx = visCanvasUtils.VisCoord.pointToPixel(safeTlc);
     const safeBrcPx = visCanvasUtils.VisCoord.pointToPixel(safeBrc);
     ctx.rect(
       safeTlcPx[0],
       safeTlcPx[1],
       safeBrcPx[0] - safeTlcPx[0],
       safeBrcPx[1] - safeTlcPx[1]
-    )
+    );
     ctx.stroke();
 
     for (const edge of this.brainEdges.values()) {
