@@ -134,21 +134,21 @@ export default class NetworkEdge {
     ctx.stroke();
   }
 
-  learn(deltaTime, deltaFitness) {
+  learn(deltaFitness) {
     if (!this.getSourceNode() || !this.getTargetNode()) {
       return;
     }
     if (this.getSourceNode().isFiring && this.getTargetNode().isFiring) {
       const timeDelta =
-        this.getSourceNode().lastFire - this.getTargetNode().lastFire;
-      const proximityFactor = Math.exp(
+       this.getTargetNode().lastFire - this.getSourceNode().lastFire;
+      const proximityFactor = Math.exp(-
         Math.pow(
           -timeDelta / this.simParams.hebbianReinforcementTimeConstant,
           2
         )
       );
       const sign = Math.sign(this.strength);
-      this.strength += sign * deltaFitness * proximityFactor * deltaTime;
+      this.strength += sign * deltaFitness * proximityFactor;
       this.constrainStrength();
     }
   }

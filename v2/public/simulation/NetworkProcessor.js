@@ -1,7 +1,6 @@
 import { randomUniformInclusive } from "../math/random.js";
 import DebugConsole from "../ui/DebugConsole.js";
 import { MapUtil } from "../utils/collections.js";
-import { VisCoord } from "../visualization/coordinates.js";
 import NetworkNode, { NetworkNodeRole } from "./NetworkNode.js";
 import NetworkEdge from "./NetworkEdge.js";
 import { randomChoice } from "../utils/collections.js";
@@ -102,16 +101,64 @@ export default class NetworkProcessor {
       return;
     }
 
-    let sourceNodeId = randomChoice(Array.from(validSources));
-    let targetNodeId = randomChoice(Array.from(validTargets));
+    let sourceNodeId = null;
+    let targetNodeId = null;
+
+    const allMotorNodes = Array.from(this.nodes.values()).filter(
+      (node) => node.role === NetworkNodeRole.MOVEMENT
+    );
+    const freeMotorNodes = allMotorNodes.filter(
+      (node) => node.edgeIdCacheIn.size === 0
+    );
+    const allVisualNodes = Array.from(this.nodes.values()).filter(
+      (node) => node.role === NetworkNodeRole.VISUAL
+    );
+    const freeSensorNodes = allVisualNodes.filter(
+      (node) => node.edgeIdCacheOut.size === 0
+    );
+    const allDataNodes = Array.from(this.nodes.values()).filter(
+      (node) => node.role === NetworkNodeRole.NORMAL
+    );
 
     while (
+      !sourceNodeId ||
+      !targetNodeId ||
       sourceNodeId === targetNodeId ||
       (this.nodes.get(sourceNodeId).role === NetworkNodeRole.VISUAL &&
         this.nodes.get(targetNodeId).role === NetworkNodeRole.MOVEMENT)
     ) {
-      sourceNodeId = randomChoice(Array.from(validSources));
       targetNodeId = randomChoice(Array.from(validTargets));
+      sourceNodeId = randomChoice(Array.from(validSources));
+      if (this.nodes.get(sourceNodeId).role === NetworkNodeRole.NORMAL) {
+        if (freeMotorNodes.length > 0) {
+          targetNodeId = randomChoice(freeMotorNodes).id;
+        } else {
+          const freeDataNodes = allDataNodes.filter(
+            (node) =>
+              node.role === NetworkNodeRole.NORMAL &&
+              node.edgeIdCacheIn.size === 0 &&
+              node.id !== sourceNodeId
+          );
+          if (freeDataNodes.length > 0) {
+            targetNodeId = randomChoice(freeDataNodes).id;
+          }
+        }
+      }
+      if (this.nodes.get(targetNodeId).role === NetworkNodeRole.NORMAL) {
+        if (freeSensorNodes.length > 0) {
+          sourceNodeId = randomChoice(freeSensorNodes).id;
+        } else {
+          const freeDataNodes = allDataNodes.filter(
+            (node) =>
+              node.role === NetworkNodeRole.NORMAL &&
+              node.edgeIdCacheIn.size === 0 &&
+              node.id !== sourceNodeId
+          );
+          if (freeDataNodes.length > 0) {
+            targetNodeId = randomChoice(freeDataNodes).id;
+          }
+        }
+      }
     }
 
     this.connectWithEdge(
@@ -128,7 +175,6 @@ export default class NetworkProcessor {
   __update(deltaTime, deltaFitness) {
     // Traverse in random order to avoid traversal order effects
     // Using a buffer based approach is more accurate but more difficult to implement as well as doubling the memory requirement
-    const numNodes = this.nodes.size;
 
     const allEdgeKeys = Array.from(this.edges.keys());
     const shuffledEdgeKeys = shuffled(allEdgeKeys);
@@ -152,16 +198,21 @@ export default class NetworkProcessor {
       }
     }
 
+    const numDataNodes = Array.from(this.nodes.values()).filter(
+      (n) => n.role === NetworkNodeRole.NORMAL
+    ).length;
+
     const rSpawnNode =
       deltaTime *
       this.params.nodeSpawnRate *
-      (1-Math.exp(
-        -(
-          ((this.nodes.size - this.params.targetNodeCount) /
-            this.params.targetNodeCount) **
-          2
-        )
-      ))
+      (1 -
+        Math.exp(
+          -(
+            ((numDataNodes - this.params.targetDataNodeCount) /
+              this.params.targetDataNodeCount) **
+            2
+          )
+        ));
 
     if (Math.random() < rSpawnNode) {
       this.spawnNode();
@@ -170,13 +221,14 @@ export default class NetworkProcessor {
     const rSpawnEdge =
       deltaTime *
       this.params.edgeSpawnRate *
-      (1-Math.exp(
-        -(
-          ((this.edges.size - this.params.targetEdgeCount) /
-            this.params.targetEdgeCount) **
-          2
-        )
-      ))
+      (1 -
+        Math.exp(
+          -(
+            ((this.edges.size - this.params.targetEdgeCount) /
+              this.params.targetEdgeCount) **
+            2
+          )
+        ));
 
     if (Math.random() < rSpawnEdge) {
       this.spawnEdge();
@@ -186,7 +238,7 @@ export default class NetworkProcessor {
     // until next frame so it is okay
     // to process in same order
     for (const edge of this.edges.values()) {
-      edge.learn(deltaTime, deltaFitness);
+      edge.learn(deltaFitness);
     }
   }
 }

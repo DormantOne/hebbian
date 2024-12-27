@@ -33,17 +33,19 @@ import NetworkProcessor from "./NetworkProcessor.js";
  * @property {number} sensorFOV - Field of view for sensors
  * @property {number} sensorMaxDistance - Maximum distance for sensors
  * @property {number} numMotorNodes - Number of motor nodes per side
- * @property {number} targetNodeCount -
+ * @property {number} targetDataNodeCount -
  * @property {number} targetEdgeCount -
  * @property {number} maxAbsoluteNodeValue - Maximum absolute value for nodes
  * @property {number} maxAbsoluteEdgeStrength - Maximum absolute strength for edges
  * @property {number} firingThreshold - The accrued value at which a node fires
  * @property {number} spikeActivationLevel - Activation level for spikes
+ * @property {number} visualActivationLevel
  * @property {number} spikeDecayTimeConstant - Time constant for spike decay
  * @property {number} dischargeRate - Value decay per second while firing
  * @property {number} leakRate - Value decay rate while not firing
  * @property {number} spikeRefractoryPeriod - Refractory period for spikes
  * @property {number} survivalReward - Reward for survival
+ * @property {number} speedReward -
  * @property {number} deathPunishment - Punishment for death
  * @property {number} threatBonusProximity - Proximity bonus for threats
  * @property {number} fitnessDecayRatio - Decay ratio for fitness
@@ -86,6 +88,7 @@ export default class Simulation {
     this.fitness = 0;
     this.lastFitness = 0;
     this.deltaFitness = 0;
+    this.lastSpeed = null;
   }
 
   getState() {
@@ -115,7 +118,7 @@ export default class Simulation {
         "sensorFOV",
         "sensorMaxDistance",
         "numMotorNodes",
-        "targetNodeCount",
+        "targetDataNodeCount",
         "targetEdgeCount",
         "maxAbsoluteNodeValue",
         "maxAbsoluteEdgeStrength",
@@ -123,11 +126,13 @@ export default class Simulation {
         // Learning Parameters
         "firingThreshold",
         "spikeActivationLevel",
+        "visualActivationLevel",
         "spikeDecayTimeConstant",
         "dischargeRate",
         "leakRate",
         "spikeRefractoryPeriod",
         "survivalReward",
+        "speedReward",
         "deathPunishment",
         "threatBonusProximity",
         "fitnessDecayRatio",
@@ -138,7 +143,6 @@ export default class Simulation {
         "nodeSpawnRate",
         "edgeSpawnRate",
         "edgeExcToInhSpawnRatio",
-        
       ].map((id) => {
         return [id, getNumberParamById(id, paramErrorMessages)];
       })
@@ -179,6 +183,8 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     this.simMinFitness = 0;
     this.simMaxFitness = 0;
+
+    this.lastSpeed = null;
 
     window.fitnessPlotBounds.perSim.high.set(0);
     window.fitnessPlotBounds.perSim.low.set(0);
@@ -431,8 +437,14 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   __updateFitness(deltaTime) {
     this.fitnessHistory.unshift(this.fitness);
 
-    const nextFitness =
+    let nextFitness =
       this.fitness * (1 - this.params.fitnessDecayRatio * deltaTime);
+
+    if (this.lastSpeed !== null) {
+      nextFitness +=
+        (this.params.speedReward * deltaTime * this.lastSpeed) /
+        this.params.playerMovementSpeed;
+    }
 
     this.lastFitness = this.fitness;
 
@@ -467,7 +479,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   }
 
   __updatePlayerPosition(deltaTime) {
-    const speed = this.player.speed;
     let dx = 0;
 
     const leftMotors = this.motorNodes.slice(0, this.params.numMotorNodes);
@@ -501,7 +512,12 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     const differential = rightMeanValue - leftMeanValue;
 
-    dx = (differential / spikeActivationLevel) * speed * deltaTime;
+    dx =
+      (differential / spikeActivationLevel) *
+      this.params.playerMovementSpeed *
+      deltaTime;
+
+    this.lastSpeed = Math.abs(dx) / deltaTime;
 
     // Update player's x position
     this.player.x += dx;
@@ -510,8 +526,8 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     const radius = this.player.radius;
     const minX = radius;
     const maxX = this.params.playfieldWidth - radius;
-    if (this.player.x < minX) this.player.x = minX;
-    if (this.player.x > maxX) this.player.x = maxX;
+    if (this.player.x < minX) this.__handleCollision();
+    if (this.player.x > maxX) this.__handleCollision()
   }
 
   __updateSensors() {
@@ -592,7 +608,8 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       const sensorDistance = this.sensorDistances[i];
       if (typeof sensorDistance === "number" || !isNaN(sensorDistance)) {
         sensorNode.value =
-          (1 - sensorDistance / this.params.sensorMaxDistance)*this.params.spikeActivationLevel;
+          (1 - sensorDistance / this.params.sensorMaxDistance) *
+          this.params.visualActivationLevel;
       } else {
         sensorNode.value = 0;
       }
@@ -607,7 +624,8 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     // Random x-position for the icicle within the playfield
     const x = Math.random() * (playfieldWidth - width);
-    const y = -height; // Start above the playfield
+    // Start above playfield
+    const y = -height;
 
     const icicle = new Icicle(x, y, width, height, 0);
 
@@ -666,6 +684,8 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.player.circle.pos.x = this.player.x;
     this.player.circle.pos.y = this.player.y;
 
+    this.lastSpeed = null;
+
     // Reset motor neuron value
     if (this.controlledBy === "ai") {
       this.motorNodes.forEach((motorNode) => {
@@ -693,9 +713,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     window.prettyUpdateMetric("threatRayCount", {
       widget: "fraction-bar",
       getColor(value) {
-        const r = 127 + Math.floor((255 - 127) * value);
-        const g = 127;
-        const b = 127;
+        const r = 128 + Math.floor((255 - 128) * value);
+        const g = 128;
+        const b = 128;
         return `rgb(${r}, ${g}, ${b})`;
       },
       value: 0,
@@ -740,8 +760,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
   __renderVisualization() {
     this.networkNodeValueScale.clear();
-    const allNodeValues = Array.from(this.brainNodes
-      .values())
+    const allNodeValues = Array.from(this.brainNodes.values())
       .filter((node) => node.role !== NetworkNodeRole.VISUAL)
       .map((node) => node.getValue());
 
@@ -844,9 +863,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     window.prettyUpdateMetric("threatRayCount", {
       widget: "fraction-bar",
       getColor(value) {
-        const r = 127 + Math.floor((255 - 127) * value);
-        const g = 127;
-        const b = 127;
+        const r = 128 + Math.floor((255 - 128) * value);
+        const g = 128;
+        const b = 128;
         return `rgb(${r}, ${g}, ${b})`;
       },
       value: this.threatRayCount / this.params.numSensorRays,

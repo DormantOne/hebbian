@@ -3,6 +3,10 @@ import { getVisCtx, VisCoord } from "../visualization/coordinates.js";
 import { MapUtil } from "../utils/collections.js";
 import DebugConsole from "../ui/DebugConsole.js";
 import { formatRGBACss, interpolateRGBA } from "../visualization/color.js";
+import DynamicScale from "../math/DynamicScale.js";
+import { procMax, procMin } from "../math/procedural.js";
+import { clamp } from "../math/numeric.js";
+import lerp from "../math/lerp.js";
 
 /**
  * @typedef {import('./Simulation').SimulationParams} SimulationParams
@@ -87,7 +91,6 @@ export default class NetworkNode {
 
     this.isFiring = false;
 
-    this.valueAtFire = null;
 
     this.simNodes = simNodes;
 
@@ -99,9 +102,12 @@ export default class NetworkNode {
   computeOutputLevel() {
     if (this.isFiring) {
       if (this.lastFire) {
-        return Math.exp(
-          -this.simParams.spikeActivationLevel /
-            this.simParams.spikeDecayTimeConstant
+        return (
+          this.simParams.spikeActivationLevel *
+          Math.exp(
+            -(performance.now() / 1000 - this.lastFire) /
+              this.simParams.spikeDecayTimeConstant
+          )
         );
       }
     }
@@ -132,18 +138,20 @@ export default class NetworkNode {
     if (this.role !== NetworkNodeRole.VISUAL) {
       if (this.value > 0) {
         this.value *=
-          1 - (deltaTime * (this.isFiring
-            ? this.simParams.dischargeRate
-            : this.simParams.leakRate))
+          1 -
+          deltaTime *
+            (this.isFiring
+              ? this.simParams.dischargeRate
+              : this.simParams.leakRate);
       }
     }
 
     if (this.role !== NetworkNodeRole.VISUAL) {
-      if (this.value >= this.simParams.firingThreshold * deltaTime) {
+      if (this.value >= this.simParams.firingThreshold) {
         if (this.refractoryTimer <= 0) {
           this.lastFire = performance.now() / 1000;
           this.isFiring = true;
-          this.valueAtFire = this.value;
+          this.refractoryTimer = this.simParams.spikeRefractoryPeriod;
         }
       }
     }
@@ -170,18 +178,17 @@ export default class NetworkNode {
       this.lifetime = this.simParams.nodeInactiveLifetime;
       for (let edgeId of this.edgeIdCacheIn) {
         const edge = new MapUtil(this.simEdges).getOrThrow(edgeId);
-        edge.resetLifetime();
+        const edgeSourceNode = edge.getSourceNode();
+        if (edgeSourceNode) {
+          if (edgeSourceNode.role === NetworkNodeRole.VISUAL) {
+            edge.resetLifetime();
+          }
+        }
       }
       for (let edgeId of this.edgeIdCacheOut) {
         const edge = new MapUtil(this.simEdges).getOrThrow(edgeId);
         edge.resetLifetime();
       }
-      // this.value =
-      //   this.valueAtFire *
-      //   Math.exp(
-      //     -(performance.now() / 1000 - this.lastFire) /
-      //       this.simParams.spikeDecayTimeConstant
-      //   );
     }
     if (this.isFiring) {
       const now = performance.now() / 1000;
@@ -191,9 +198,10 @@ export default class NetworkNode {
       ) {
         this.isFiring = false;
         this.lastFire = null;
-        this.valueAtFire = null;
+        this.refractoryTimer = 0
       }
     }
+    this.adjustVisLoc(deltaTime);
   }
 
   constrainValue() {
@@ -240,14 +248,44 @@ export default class NetworkNode {
         interpolateRGBA(this.value, [0, 0, 0, 1], [255, 255, 255, 1])
       );
     } else {
-      fillColor = formatRGBACss(
-        this.valueScale.interpolateLevelColor(
-          this.value,
-          [0, 0, 0],
-          [255, 255, 255],
-          [128, 128, 128]
-        )
+      const allNonVisualNodeValues = Array.from(this.simNodes.values()).filter(
+        (node) => node.role !== NetworkNodeRole.VISUAL
       );
+      if (allNonVisualNodeValues.length < 2) {
+        fillColor = "rgba(128, 128, 128, 1)";
+      }
+
+      const zeroPoint = (0 - this.valueScale.start) / this.valueScale.range;
+
+      if (this.value == 0) {
+        fillColor = "rgba(128, 128, 128, 1)";
+      } else if (this.value > 0) {
+        const unboundT = this.valueScale.getLevel(this.value) - zeroPoint;
+        fillColor =
+          !isNaN(unboundT) && isFinite(unboundT)
+            ? formatRGBACss(
+                this.valueScale.interpolateLevelColor(
+                  clamp(unboundT * 2, 0, 1),
+                  [128, 128, 128],
+                  [255, 255, 0],
+                  [128, 128, 128]
+                )
+              )
+            : "rgba(128, 128, 128, 1)";
+      } else {
+        const unboundT = zeroPoint - this.valueScale.getLevel(this.value);
+        fillColor =
+          !isNaN(unboundT) && isFinite(unboundT)
+            ? formatRGBACss(
+                this.valueScale.interpolateLevelColor(
+                  clamp(unboundT * 2, 0, 1),
+                  [128, 128, 128],
+                  [255, 0, 255],
+                  [128, 128, 128]
+                )
+              )
+            : "rgba(128, 128, 128, 1)";
+      }
     }
 
     if (this.isFiring) {
@@ -276,5 +314,54 @@ export default class NetworkNode {
       ctx.stroke();
     }
     ctx.fill();
+  }
+
+  adjustVisLoc(deltaTime) {
+    const allEdgeIds = [...this.edgeIdCacheIn, ...this.edgeIdCacheOut];
+    const allCompleteEdgeIds = allEdgeIds.filter((edgeId) => {
+      const edge = new MapUtil(this.simEdges).getOrThrow(edgeId);
+      return (
+        edge.getSourceNode() &&
+        edge.getTargetNode() &&
+        edge.getSourceNode().role === NetworkNodeRole.NORMAL &&
+        edge.getTargetNode().role === NetworkNodeRole.NORMAL
+      );
+    });
+    if (allCompleteEdgeIds.length >= 2) {
+      const allCompleteEdgeStrengthValues = allCompleteEdgeIds.map((edgeId) => {
+        const edge = new MapUtil(this.simEdges).getOrThrow(edgeId);
+        return edge.strength;
+      });
+      const ds = new DynamicScale();
+      ds.compute(allCompleteEdgeStrengthValues);
+      const weights = allCompleteEdgeStrengthValues.map((s) => {
+        return ds.getLevelOrDefault(s, 0);
+      });
+      const denom = weights.reduce((a, b) => a + b, 0);
+      if (denom > ds.cutoff) {
+        let xTotal = 0;
+        let yTotal = 0;
+        for (const edgeId of allCompleteEdgeIds) {
+          const edge = new MapUtil(this.simEdges).getOrThrow(edgeId);
+          const sourceNode = edge.getSourceNode();
+          const targetNode = edge.getTargetNode();
+          if (sourceNode.id !== this.id && targetNode.id !== this.id) {
+            throw new Error("Incomplete edge found in node drawing");
+          }
+          const other = sourceNode.id === this.id ? targetNode : sourceNode;
+          const [otherX, otherY] = other.visLoc;
+
+          const normalizedWeight =
+            ds.getLevelOrDefault(edge.strength, 0) / denom;
+          xTotal += otherX * normalizedWeight;
+          yTotal += otherY * normalizedWeight;
+        }
+        const lastX = this.visLoc[0];
+        const lastY = this.visLoc[1];
+        const newX = lerp(lastX, xTotal, deltaTime);
+        const newY = lerp(lastY, yTotal, deltaTime);
+        this.visLoc = [newX, newY];
+      }
+    }
   }
 }
