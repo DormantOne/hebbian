@@ -3,6 +3,8 @@ import DebugConsole from "../ui/DebugConsole.js";
 import Simulation from "../simulation/Simulation.js";
 import { constrainElementFractionOfWindowSize } from "../ui/layout.js";
 import { capitalizeFirstLetter } from "../utils/text.js";
+import PageLoadingOverlay from "../ui/PageLoadingOverlay.js";
+import defaultParams from "../simulation/defaultParams.js";
 
 window.onload = () => {
   new TabView("parameterTabContainer", 0)
@@ -59,11 +61,11 @@ window.onload = () => {
     if (value === null) {
       return "N/A";
     }
-    if(typeof value === "string") {
+    if (typeof value === "string") {
       return capitalizeFirstLetter(value);
     }
     if (typeof value === "number") {
-      return value.toString()
+      return value.toString();
     }
     if (Array.isArray(value)) {
       return value.map(getPrettyMetric).join("\n");
@@ -71,10 +73,10 @@ window.onload = () => {
     return value.toString();
   }
 
-  window.prettyUpdateMetric = function (id, value){
+  window.prettyUpdateMetric = function (id, value) {
     const element = document.getElementById(id);
-    if(typeof value === "object" && value!==null){
-      if(value.widget==="fraction-bar"){ 
+    if (typeof value === "object" && value !== null) {
+      if (value.widget === "fraction-bar") {
         const barContainerDiv = document.createElement("div");
         barContainerDiv.style.width = "100%";
         barContainerDiv.style.height = "1em";
@@ -84,15 +86,17 @@ window.onload = () => {
         barDiv.style.width = `${value.value * 100}%`;
         barDiv.style.position = "absolute";
         barDiv.style.height = "100%";
-        barDiv.style.background = value.getColor? value.getColor(value.value) : "grey";
+        barDiv.style.background = value.getColor
+          ? value.getColor(value.value)
+          : "grey";
         barContainerDiv.appendChild(barDiv);
         element.innerHTML = "";
         element.appendChild(barContainerDiv);
       }
-    }else{
-      element.textContent = getPrettyMetric(value)
+    } else {
+      element.textContent = getPrettyMetric(value);
     }
-  }
+  };
 
   function updateUIForSimulationState(state) {
     function setThemeColor(element, themeColor) {
@@ -127,16 +131,18 @@ window.onload = () => {
     radioButtons.forEach((button) => {
       button.disabled = !enableRadioButtons;
     });
-    
-    const allParameterInputs = document.querySelectorAll(".ParameterControl input")
-    if(state==="stopped"){
+
+    const allParameterInputs = document.querySelectorAll(
+      ".ParameterControl input"
+    );
+    if (state === "stopped") {
       allParameterInputs.forEach((input) => {
         input.disabled = false;
-      })
-    }else{
+      });
+    } else {
       allParameterInputs.forEach((input) => {
         input.disabled = true;
-      })
+      });
     }
 
     // Update UI elements based on the simulation state
@@ -226,82 +232,100 @@ window.onload = () => {
       }
     });
 
-  const visCanvasContainer = document.querySelector('.VisCanvasContainer');
-  const visCanvas = document.querySelector('.VisCanvas');
+  const visCanvasContainer = document.querySelector(".VisCanvasContainer");
+  const visCanvas = document.querySelector(".VisCanvas");
 
-  function registerVisCanvas(){
-    const {width, height} = visCanvasContainer.getBoundingClientRect();
+  function registerVisCanvas() {
+    const { width, height } = visCanvasContainer.getBoundingClientRect();
     const smaller = Math.min(width, height);
     visCanvas.width = smaller;
     visCanvas.height = smaller;
     visCanvas.style.width = `${smaller}px`;
     visCanvas.style.height = `${smaller}px`;
-    window.visCanvasCtx = visCanvas.getContext('2d');
-    window.visCanvasWidth = smaller
-    window.visCanvasHeight = smaller
-    
+    window.visCanvasCtx = visCanvas.getContext("2d");
+    window.visCanvasWidth = smaller;
+    window.visCanvasHeight = smaller;
   }
 
-  registerVisCanvas()
-  
-  window.addEventListener('resize', () => {
+  registerVisCanvas();
+
+  window.addEventListener("resize", () => {
     registerVisCanvas();
-  })
+  });
 
-  visCanvas.style.display = 'block';
+  visCanvas.style.display = "block";
 
-   const fitnessCanvasContainer = document.querySelector('.FitnessCanvasContainer');
-   const fitnessCanvas = document.querySelector('.FitnessCanvas');
+  const fitnessCanvasContainer = document.querySelector(
+    ".FitnessCanvasContainer"
+  );
+  const fitnessCanvas = document.querySelector(".FitnessCanvas");
 
-   function registerFitnessCanvas(){
-    const {width, height} = fitnessCanvasContainer.getBoundingClientRect();
+  function registerFitnessCanvas() {
+    const { width, height } = fitnessCanvasContainer.getBoundingClientRect();
     fitnessCanvas.width = width;
     fitnessCanvas.height = height;
     fitnessCanvas.style.width = `${width}px`;
     fitnessCanvas.style.height = `${height}px`;
-    window.fitnessCanvasCtx = fitnessCanvas.getContext('2d');
-    window.fitnessCanvasWidth= width
-    window.fitnessCanvasHeight = height
-   }
+    window.fitnessCanvasCtx = fitnessCanvas.getContext("2d");
+    window.fitnessCanvasWidth = width;
+    window.fitnessCanvasHeight = height;
+  }
 
-   registerFitnessCanvas()
+  registerFitnessCanvas();
 
-   window.addEventListener('resize', () => {
+  window.addEventListener("resize", () => {
     registerFitnessCanvas();
-  })
+  });
 
-    window.fitnessPlotPerSimBoundHigh = document.querySelector('.FitnessPlotPerSimBound.High');
-    window.fitnessPlotPerPlotBoundHigh = document.querySelector('.FitnessPlotPerPlotBound.High');
-    window.fitnessPlotPerPlotBoundLow = document.querySelector('.FitnessPlotPerPlotBound.Low');
-    window.fitnessPlotPerSimBoundLow = document.querySelector('.FitnessPlotPerSimBound.Low');
+  window.fitnessPlotPerSimBoundHigh = document.querySelector(
+    ".FitnessPlotPerSimBound.High"
+  );
+  window.fitnessPlotPerPlotBoundHigh = document.querySelector(
+    ".FitnessPlotPerPlotBound.High"
+  );
+  window.fitnessPlotPerPlotBoundLow = document.querySelector(
+    ".FitnessPlotPerPlotBound.Low"
+  );
+  window.fitnessPlotPerSimBoundLow = document.querySelector(
+    ".FitnessPlotPerSimBound.Low"
+  );
 
-    window.fitnessPlotBounds = {
-      perPlot: {
-        high: {
-          set: (value) => {
-            window.fitnessPlotPerPlotBoundHigh.textContent = value.toFixed(3)
-          },
-        },
-        low: {
-          set: (value) => {
-            window.fitnessPlotPerPlotBoundLow.textContent = value.toFixed(3)
-          },
+  window.fitnessPlotBounds = {
+    perPlot: {
+      high: {
+        set: (value) => {
+          window.fitnessPlotPerPlotBoundHigh.textContent = value.toFixed(3);
         },
       },
-      perSim: {
-        high: {
-          set: (value) => {
-            window.fitnessPlotPerSimBoundHigh.textContent = value.toFixed(3)
-          },
+      low: {
+        set: (value) => {
+          window.fitnessPlotPerPlotBoundLow.textContent = value.toFixed(3);
         },
-        low: {
-          set: (value) => {
-            window.fitnessPlotPerSimBoundLow.textContent = value.toFixed(3)
-          },
+      },
+    },
+    perSim: {
+      high: {
+        set: (value) => {
+          window.fitnessPlotPerSimBoundHigh.textContent = value.toFixed(3);
         },
-      }
+      },
+      low: {
+        set: (value) => {
+          window.fitnessPlotPerSimBoundLow.textContent = value.toFixed(3);
+        },
+      },
+    },
+  };
+
+  fitnessCanvas.style.display = "block";
+
+  for (const [key, value] of Object.entries(defaultParams)) {
+    const elem = document.getElementById(key);
+    if (!elem) {
+      throw new Error(`No element found for parameter "${key}"`);
     }
+    elem.value = typeof value === "number" ? value.toFixed(3) : value;
+  }
 
-
-   fitnessCanvas.style.display = 'block';
+  PageLoadingOverlay.hide();
 };

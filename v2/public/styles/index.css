@@ -476,3 +476,40 @@ body {
   opacity: 60%;
   cursor: not-allowed;
 }
+
+.PageLoadingOverlay {
+  position: fixed;
+  z-index: 9999;
+  width: 100vw;
+  height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.PageLoadingSpinnerBox {
+  width: 5rem;
+  height: 5rem;
+  background: rgb(200,200,200);
+  position: relative
+}
+
+.PageLoadingSpinner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 3px solid cornflowerblue;
+  border-top: 3px solid white;
+  border-radius: 50%;
+  animation: spinner 2s linear infinite;
+}
+
+@keyframes spinner {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+

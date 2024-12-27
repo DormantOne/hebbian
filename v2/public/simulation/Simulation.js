@@ -40,6 +40,8 @@ import NetworkProcessor from "./NetworkProcessor.js";
  * @property {number} firingThreshold - The accrued value at which a node fires
  * @property {number} spikeActivationLevel - Activation level for spikes
  * @property {number} spikeDecayTimeConstant - Time constant for spike decay
+ * @property {number} dischargeRate - Value decay per second while firing
+ * @property {number} leakRate - Value decay rate while not firing
  * @property {number} spikeRefractoryPeriod - Refractory period for spikes
  * @property {number} survivalReward - Reward for survival
  * @property {number} deathPunishment - Punishment for death
@@ -122,6 +124,8 @@ export default class Simulation {
         "firingThreshold",
         "spikeActivationLevel",
         "spikeDecayTimeConstant",
+        "dischargeRate",
+        "leakRate",
         "spikeRefractoryPeriod",
         "survivalReward",
         "deathPunishment",
@@ -134,6 +138,7 @@ export default class Simulation {
         "nodeSpawnRate",
         "edgeSpawnRate",
         "edgeExcToInhSpawnRatio",
+        
       ].map((id) => {
         return [id, getNumberParamById(id, paramErrorMessages)];
       })
@@ -193,50 +198,18 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       this.sensorNodes.push(
         new NetworkNode(
           NetworkNodeRole.VISUAL,
-          [Math.cos(theta) * 0.85, Math.sin(theta) * 0.85],
+          [Math.cos(theta) * 0.95, Math.sin(theta) * 0.95],
           this.params,
           this.networkNodeValueScale,
           this.brainNodes,
           this.brainEdges,
           `sensor${i}`,
           {
-            visualScale: 2 / 5,
+            visualScale: 3.5 / 5,
           }
         )
       );
     }
-    // this.motorNodes = [
-    //   new NetworkNode(
-    //     NetworkNodeRole.MOVEMENT,
-    //     [
-    //       -0.85 * Math.cos(((90 - this.params.sensorFOV / 2) * Math.PI) / 180),
-    //       0,
-    //     ],
-    //     this.params,
-    //     this.networkNodeValueScale,
-    //     this.brainNodes,
-    //     this.brainEdges,
-    //     "motorLeft",
-    //     {
-    //       visualScale: 3,
-    //     }
-    //   ),
-    //   new NetworkNode(
-    //     NetworkNodeRole.MOVEMENT,
-    //     [
-    //       0.85 * Math.cos(((90 - this.params.sensorFOV / 2) * Math.PI) / 180),
-    //       0,
-    //     ],
-    //     this.params,
-    //     this.networkNodeValueScale,
-    //     this.brainNodes,
-    //     this.brainEdges,
-    //     "motorRight",
-    //     {
-    //       visualScale: 3,
-    //     }
-    //   ),
-    // ];
 
     this.motorNodes = [];
 
@@ -282,9 +255,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     for (let i = 0; i < this.sensorNodes.length; i++) {
       this.brainNodes.set(`sensor${i}`, this.sensorNodes[i]);
     }
-
-    // this.brainNodes.set("motorLeft", this.motorNodes[0]);
-    // this.brainNodes.set("motorRight", this.motorNodes[1]);
 
     for (let i = 0; i < this.params.numMotorNodes; i++) {
       const idLeft = `motorLeft${i}`;
@@ -621,11 +591,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       const sensorNode = this.sensorNodes[i];
       const sensorDistance = this.sensorDistances[i];
       if (typeof sensorDistance === "number" || !isNaN(sensorDistance)) {
-        sensorNode.autofireRate =
-          1 - sensorDistance / this.params.sensorMaxDistance;
-          sensorNode.value = 1-(sensorDistance)/this.params.sensorMaxDistance;
+        sensorNode.value =
+          (1 - sensorDistance / this.params.sensorMaxDistance)*this.params.spikeActivationLevel;
       } else {
-        sensorNode.autofireRate = null;
         sensorNode.value = 0;
       }
     }
@@ -760,6 +728,8 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       0,
       Math.PI * 2
     );
+    ctx.closePath();
+
     ctx.fill();
 
     // Draw icicles
@@ -770,11 +740,8 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
   __renderVisualization() {
     this.networkNodeValueScale.clear();
-    // const allNodeValues = Array.from(
-    //   this.brainNodes.values().map((node) => node.getValue())
-    // );
-    const allNodeValues = this.brainNodes
-      .values()
+    const allNodeValues = Array.from(this.brainNodes
+      .values())
       .filter((node) => node.role !== NetworkNodeRole.VISUAL)
       .map((node) => node.getValue());
 
@@ -802,14 +769,14 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     const safeBrc = [safeXmax, safeYmax];
     const safeTlcPx = visCanvasUtils.VisCoord.pointToPixel(safeTlc);
     const safeBrcPx = visCanvasUtils.VisCoord.pointToPixel(safeBrc);
-    ctx.beginPath()
+    ctx.beginPath();
     ctx.rect(
       safeTlcPx[0],
       safeTlcPx[1],
       safeBrcPx[0] - safeTlcPx[0],
       safeBrcPx[1] - safeTlcPx[1]
     );
-    ctx.closePath()
+    ctx.closePath();
     ctx.stroke();
 
     for (const edge of this.brainEdges.values()) {

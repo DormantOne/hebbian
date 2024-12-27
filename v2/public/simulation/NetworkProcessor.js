@@ -155,14 +155,13 @@ export default class NetworkProcessor {
     const rSpawnNode =
       deltaTime *
       this.params.nodeSpawnRate *
-      (1 -
-        Math.exp(
-          -(
-            ((this.nodes.size - this.params.targetNodeCount) /
-              this.params.targetNodeCount) **
-            2
-          )
-        ));
+      (1-Math.exp(
+        -(
+          ((this.nodes.size - this.params.targetNodeCount) /
+            this.params.targetNodeCount) **
+          2
+        )
+      ))
 
     if (Math.random() < rSpawnNode) {
       this.spawnNode();
@@ -171,14 +170,13 @@ export default class NetworkProcessor {
     const rSpawnEdge =
       deltaTime *
       this.params.edgeSpawnRate *
-      (1 -
-        Math.exp(
-          -(
-            ((this.edges.size - this.params.targetEdgeCount) /
-              this.params.targetEdgeCount) **
-            2
-          )
-        ));
+      (1-Math.exp(
+        -(
+          ((this.edges.size - this.params.targetEdgeCount) /
+            this.params.targetEdgeCount) **
+          2
+        )
+      ))
 
     if (Math.random() < rSpawnEdge) {
       this.spawnEdge();
