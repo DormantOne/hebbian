@@ -115,7 +115,7 @@ export default class NetworkNode {
   }
 
   die() {
-    DebugConsole.info(`Node ${this.id} died`);
+    DebugConsole.warn(`Node ${this.id} died`);
     for (let edgeId of this.edgeIdCacheIn) {
       const edge = new MapUtil(this.simEdges).getOrThrow(edgeId);
       edge.die();

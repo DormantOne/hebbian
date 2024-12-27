@@ -70,7 +70,7 @@ export default class NetworkProcessor {
       this.edgeVisStrengthScale
     );
     new MapUtil(this.edges).setOrAddWithUniqueKey(
-      `${sourceNodeId}_${targetNodeId}`,
+      newEdge.getId(),
       newEdge
     );
     newEdge.registerWithConnectedNodes();

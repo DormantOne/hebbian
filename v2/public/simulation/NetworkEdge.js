@@ -57,9 +57,9 @@ export default class NetworkEdge {
   die() {
     DebugConsole.info(`Edge ${this.getId()} died`);
     this.unregisterWithConnectedNodes();
+    this.edges.delete(this.getId());
     this.sourceNodeId = null;
     this.targetNodeId = null;
-    this.edges.delete(this.getId());
     // Will be destroyed on next garbage collection
   }
 
@@ -152,7 +152,9 @@ export default class NetworkEdge {
   }
 
   learn(deltaFitness) {
+
     if (!this.getSourceNode() || !this.getTargetNode()) {
+      console.error(`Bad edge: missing source or target node: ${this.getId()}`);
       return;
     }
     if (this.getSourceNode().isFiring && this.getTargetNode().isFiring) {
@@ -167,6 +169,8 @@ export default class NetworkEdge {
       const sign = Math.sign(this.strength);
       this.strength += sign * deltaFitness * proximityFactor;
       this.constrainStrength();
+    }else{
+      this.strength *= (1-this.simParams.edgeStrengthLeakFactor)
     }
   }
 }

@@ -52,6 +52,7 @@ import NetworkProcessor from "./NetworkProcessor.js";
  * @property {number} threatBonusProximity - Proximity bonus for threats
  * @property {number} fitnessDecayRatio - Decay ratio for fitness
  * @property {number} hebbianReinforcementTimeConstant - Time constant for Hebbian reinforcement
+ * @property {number} edgeStrengthLeakFactor
  * @property {number} hebbianStrengthFactor - Strength factor for Hebbian learning
  * @property {number} nodeInactiveLifetime - Lifetime for inactive nodes
  * @property {number} edgeInactiveLifetime - Lifetime for inactive edges
@@ -141,6 +142,7 @@ export default class Simulation {
         "threatBonusProximity",
         "fitnessDecayRatio",
         "hebbianReinforcementTimeConstant",
+        "edgeStrengthLeakFactor",
         "hebbianStrengthFactor",
         "nodeInactiveLifetime",
         "edgeInactiveLifetime",
@@ -425,12 +427,11 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       (icicle) => !icicle.isOffScreen(this.params.playfieldHeight)
     );
 
-    const nextIciclesLength = this.icicles.length;
-    const icicleCountDelta = lastIciclesLength - nextIciclesLength;
-    if(icicleCountDelta > 0) {
-      this.__reward(icicleCountDelta)
-    }
-
+    // const nextIciclesLength = this.icicles.length;
+    // const icicleCountDelta = lastIciclesLength - nextIciclesLength;
+    // if (icicleCountDelta > 0) {
+    //   this.__rewardPassedSpike(icicleCountDelta);
+    // }
 
     // Update player's SAT.js circle position
     this.player.circle.pos.x = this.player.x;
@@ -443,9 +444,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     this.__updateThreatRayCount();
 
-    this.__updateNodeAndEdgeCounts()
+    this.__updateNodeAndEdgeCounts();
 
-    // this.__reward(deltaTime);
+    this.__reward(deltaTime);
 
     this.__updateFitness(deltaTime);
   }
@@ -453,23 +454,27 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   __updateFitness(deltaTime) {
     this.fitnessHistory.unshift(this.fitness);
 
-    let nextFitness =
-      this.fitness * (1 - this.params.fitnessDecayRatio * deltaTime);
+    // let nextFitness =
+    //   this.fitness *
+    //   (this.fitness > 0 ? 1 - this.params.fitnessDecayRatio : 1);
+
+    this.deltaFitness = this.fitness - this.lastFitness;
+
+    this.lastFitness = this.fitness;
+
+    let nextFitness = this.fitness
 
     if (this.lastSpeed !== null) {
       nextFitness +=
         (this.params.speedReward * deltaTime * this.lastSpeed) /
         this.params.playerMovementSpeed;
-        window.prettyUpdateMetric("lastSpeed", this.lastSpeed.toFixed(3));
-    }else{
+      window.prettyUpdateMetric("lastSpeed", this.lastSpeed.toFixed(3));
+    } else {
       window.prettyUpdateMetric("lastSpeed", null);
     }
 
-    this.lastFitness = this.fitness;
-
     this.fitness = nextFitness;
 
-    this.deltaFitness = this.fitness - this.lastFitness;
 
     if (this.fitness < this.simMinFitness) {
       window.fitnessPlotBounds.perSim.low.set(this.fitness);
@@ -488,14 +493,15 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     window.fitnessPlotBounds.perPlot.low.set(minOfPlot);
   }
 
-  // __reward(deltaTime) {
-  //   const threatBonus = 1 + this.threatRayCount / this.params.numSensorRays;
-  //   this.fitness += this.params.survivalReward * threatBonus * deltaTime;
-  // }
+  __reward(deltaTime) {
+    const threatBonus = 1 + this.threatRayCount / this.params.numSensorRays;
+    this.fitness += this.params.survivalReward * threatBonus * deltaTime;
+  }
 
-  __reward(count){
-    this.fitness += this.params.survivalReward *  count
+  __rewardPassedSpike(count) {
+    const threatBonus = 1 + this.threatRayCount / this.params.numSensorRays;
 
+    this.fitness += this.params.survivalReward * count * threatBonus;
   }
   __punish() {
     this.fitness -= this.params.deathPunishment;
@@ -550,7 +556,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     const minX = radius;
     const maxX = this.params.playfieldWidth - radius;
     if (this.player.x < minX) this.__handleCollision();
-    if (this.player.x > maxX) this.__handleCollision()
+    if (this.player.x > maxX) this.__handleCollision();
   }
 
   __updateSensors() {
@@ -782,11 +788,11 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   }
 
   __renderVisualization() {
-    const allDegrees = Array.from(this.brainNodes.values()).map(n=>{
-      return n.edgeIdCacheIn.size + n.edgeIdCacheOut.size
-    })
-    const maxDegree = procMax(allDegrees)
-    window.maxDegree = maxDegree
+    const allDegrees = Array.from(this.brainNodes.values()).map((n) => {
+      return n.edgeIdCacheIn.size + n.edgeIdCacheOut.size;
+    });
+    const maxDegree = procMax(allDegrees);
+    window.maxDegree = maxDegree;
 
     this.networkNodeValueScale.clear();
     const allNodeValues = Array.from(this.brainNodes.values())
@@ -876,12 +882,12 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     fitnessCtx.stroke();
   }
 
-  __updateNodeAndEdgeCounts(){
+  __updateNodeAndEdgeCounts() {
     const dataNodeCount = Array.from(this.brainNodes.values()).filter(
       (node) => node.role === NetworkNodeRole.NORMAL
-    ).length
-    const edgeCount = Array.from(this.brainEdges.values()).length
-    window.prettyUpdateMetric("dataNodeCount",dataNodeCount);
+    ).length;
+    const edgeCount = Array.from(this.brainEdges.values()).length;
+    window.prettyUpdateMetric("dataNodeCount", dataNodeCount);
     window.prettyUpdateMetric("edgeCount", edgeCount);
   }
 
