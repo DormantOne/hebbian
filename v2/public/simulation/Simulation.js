@@ -50,7 +50,6 @@ import NetworkProcessor from "./NetworkProcessor.js";
  * @property {number} speedReward -
  * @property {number} deathPunishment - Punishment for death
  * @property {number} threatBonusProximity - Proximity bonus for threats
- * @property {number} fitnessDecayRatio - Decay ratio for fitness
  * @property {number} hebbianReinforcementTimeConstant - Time constant for Hebbian reinforcement
  * @property {number} edgeStrengthLeakFactor
  * @property {number} hebbianStrengthFactor - Strength factor for Hebbian learning
@@ -140,7 +139,6 @@ export default class Simulation {
         "speedReward",
         "deathPunishment",
         "threatBonusProximity",
-        "fitnessDecayRatio",
         "hebbianReinforcementTimeConstant",
         "edgeStrengthLeakFactor",
         "hebbianStrengthFactor",
@@ -453,10 +451,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
   __updateFitness(deltaTime) {
     this.fitnessHistory.unshift(this.fitness);
-
-    // let nextFitness =
-    //   this.fitness *
-    //   (this.fitness > 0 ? 1 - this.params.fitnessDecayRatio : 1);
 
     this.deltaFitness = this.fitness - this.lastFitness;
 

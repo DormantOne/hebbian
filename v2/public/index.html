@@ -362,21 +362,6 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
               </div>
               <div class="ParameterControl">
                 <label
-                  >Fitness Decay Ratio
-                  <span class="katex">r_f</span> (1/s)</label
-                >
-                <aside>
-                  <p>
-                    Affects how we approximate decay of ambient fitness level
-                    over time.
-                  </p>
-                  <p>The fitness decay behavior is governed by (javascript):</p>
-                  <pre><code     class="language-javascript">const nextAmbientFitness = (1 - (r_f / frameRate)) * currentAmbientFitness;</code></pre>
-                </aside>
-                <input type="number" id="fitnessDecayRatio" />
-              </div>
-              <div class="ParameterControl">
-                <label
                   >Hebbian Reinforcement Time Constant
                   <span class="katex">\tau_h</span>
                   <span>(1/s)</span></label

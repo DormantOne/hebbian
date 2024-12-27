@@ -50,7 +50,6 @@ const defaultParams = {
   // different than the fitness decay time constant
   threatBonusProximity: 0.8, // The fraction of the max sensor distance
   // at which our "threat bonus" algorithm comes into play
-  fitnessDecayRatio: 0.00, // disabled for now due to how learning works
   hebbianReinforcementTimeConstant: 0.75, // This variable name needs to be changed next factor
   edgeStrengthLeakFactor: 0.005,
   // Basically the degree to which "fire together wire together" applies drops off like a bell curve the further apart in time
