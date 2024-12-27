@@ -164,8 +164,18 @@
                 <input type="number" id="targetDataNodeCount" />
               </div>
               <div class="ParameterControl">
+                <label
+                  >Target Data Node Sigma</label
+                >
+                <input type="number" id="targetDataNodeCountSigma" />
+              </div>
+              <div class="ParameterControl">
                 <label>Target Edge Count (Edges are unidirectional.)</label>
                 <input type="number" id="targetEdgeCount" />
+              </div>
+              <div class="ParameterControl">
+                <label>Target Edge Count Sigma</label>
+                <input type="number" id="targetEdgeCountSigma" />
               </div>
    
               <div class="ParameterControl">
@@ -510,6 +520,18 @@ const R_survive_adjusted = R_survive * (1 + numThreatRays / numRays);
               <tr>
                 <td>Threat Ray Count</td>
                 <td id="threatRayCount">...</td>
+              </tr>
+              <tr>
+                <td>Data Node Count</td>
+                <td id="dataNodeCount">...</td>
+              </tr>
+              <tr>
+                <td>Edge Count</td>
+                <td id="edgeCount">...</td>
+              </tr>
+              <tr>
+                <td>Speed</td>
+                <td id="lastSpeed">...</td>
               </tr>
             </tbody>
           </table>

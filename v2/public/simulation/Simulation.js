@@ -15,7 +15,7 @@ import * as fitnessCanvasUtils from "../metrics/fitness/coordinates.js";
 import { FITNESS_PLOT_NUM_FRAMES } from "../metrics/fitness/constants.js";
 import FixedSizeDeque from "../data-structures/CircularFixedSizeArray.js";
 import lerp from "../math/lerp.js";
-import { procMin, procMax } from "../math/procedural.js";
+import { procMin, procMax, procMean } from "../math/procedural.js";
 import { MapUtil } from "../utils/collections.js";
 import NetworkProcessor from "./NetworkProcessor.js";
 
@@ -34,7 +34,9 @@ import NetworkProcessor from "./NetworkProcessor.js";
  * @property {number} sensorMaxDistance - Maximum distance for sensors
  * @property {number} numMotorNodes - Number of motor nodes per side
  * @property {number} targetDataNodeCount -
+ * @property {number} targetDataNodeCountSigma -
  * @property {number} targetEdgeCount -
+ * @property {number} targetEdgeCountSigma -
  * @property {number} maxAbsoluteNodeValue - Maximum absolute value for nodes
  * @property {number} maxAbsoluteEdgeStrength - Maximum absolute strength for edges
  * @property {number} firingThreshold - The accrued value at which a node fires
@@ -119,7 +121,9 @@ export default class Simulation {
         "sensorMaxDistance",
         "numMotorNodes",
         "targetDataNodeCount",
+        "targetDataNodeCountSigma",
         "targetEdgeCount",
+        "targetEdgeCountSigma",
         "maxAbsoluteNodeValue",
         "maxAbsoluteEdgeStrength",
 
@@ -414,9 +418,19 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.icicles.forEach((icicle) => icicle.update(deltaTime));
 
     // Remove icicles that have moved off the bottom of the playfield
+
+    const lastIciclesLength = this.icicles.length;
+
     this.icicles = this.icicles.filter(
       (icicle) => !icicle.isOffScreen(this.params.playfieldHeight)
     );
+
+    const nextIciclesLength = this.icicles.length;
+    const icicleCountDelta = lastIciclesLength - nextIciclesLength;
+    if(icicleCountDelta > 0) {
+      this.__reward(icicleCountDelta)
+    }
+
 
     // Update player's SAT.js circle position
     this.player.circle.pos.x = this.player.x;
@@ -429,7 +443,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     this.__updateThreatRayCount();
 
-    this.__reward(deltaTime);
+    this.__updateNodeAndEdgeCounts()
+
+    // this.__reward(deltaTime);
 
     this.__updateFitness(deltaTime);
   }
@@ -444,6 +460,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       nextFitness +=
         (this.params.speedReward * deltaTime * this.lastSpeed) /
         this.params.playerMovementSpeed;
+        window.prettyUpdateMetric("lastSpeed", this.lastSpeed.toFixed(3));
+    }else{
+      window.prettyUpdateMetric("lastSpeed", null);
     }
 
     this.lastFitness = this.fitness;
@@ -469,11 +488,15 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     window.fitnessPlotBounds.perPlot.low.set(minOfPlot);
   }
 
-  __reward(deltaTime) {
-    const threatBonus = 1 + this.threatRayCount / this.params.numSensorRays;
-    this.fitness += this.params.survivalReward * threatBonus * deltaTime;
-  }
+  // __reward(deltaTime) {
+  //   const threatBonus = 1 + this.threatRayCount / this.params.numSensorRays;
+  //   this.fitness += this.params.survivalReward * threatBonus * deltaTime;
+  // }
 
+  __reward(count){
+    this.fitness += this.params.survivalReward *  count
+
+  }
   __punish() {
     this.fitness -= this.params.deathPunishment;
   }
@@ -759,6 +782,12 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   }
 
   __renderVisualization() {
+    const allDegrees = Array.from(this.brainNodes.values()).map(n=>{
+      return n.edgeIdCacheIn.size + n.edgeIdCacheOut.size
+    })
+    const maxDegree = procMax(allDegrees)
+    window.maxDegree = maxDegree
+
     this.networkNodeValueScale.clear();
     const allNodeValues = Array.from(this.brainNodes.values())
       .filter((node) => node.role !== NetworkNodeRole.VISUAL)
@@ -845,6 +874,15 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       fitnessCtx.lineTo(coord2[0], coord2[1]);
     }
     fitnessCtx.stroke();
+  }
+
+  __updateNodeAndEdgeCounts(){
+    const dataNodeCount = Array.from(this.brainNodes.values()).filter(
+      (node) => node.role === NetworkNodeRole.NORMAL
+    ).length
+    const edgeCount = Array.from(this.brainEdges.values()).length
+    window.prettyUpdateMetric("dataNodeCount",dataNodeCount);
+    window.prettyUpdateMetric("edgeCount", edgeCount);
   }
 
   __updateThreatRayCount() {

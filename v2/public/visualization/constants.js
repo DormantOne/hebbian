@@ -7,8 +7,6 @@ export const visSettings = {
   networkEdge:{
     minThickness: 1,
     maxThickness: 5,
-    excitatoryColor: "yellow",
-    inhibitoryColor: "magenta"
   }
 }
 

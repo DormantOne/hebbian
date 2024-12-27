@@ -5,6 +5,7 @@ import NetworkNode, { NetworkNodeRole } from "./NetworkNode.js";
 import NetworkEdge from "./NetworkEdge.js";
 import { randomChoice } from "../utils/collections.js";
 import shuffled from "../third-party/npm/fisher-yates.js";
+import { evalBellCurveShelf } from "../math/stats.js";
 
 /**
  * @typedef {import('./Simulation.js').SimulationParams} SimulationParams
@@ -18,6 +19,9 @@ export default class NetworkProcessor {
    *
    * @param {SimulationParams} params
    * @param {Map<string,NetworkNode>} nodes
+   * @param {Map<string, NetworkEdge>} edges
+   * @param {DynamicScale} nodeVisValueScale
+   * @param {DynamicScale} edgeVisStrengthScale
    */
   constructor(params, nodes, edges, nodeVisValueScale, edgeVisStrengthScale) {
     this.params = params;
@@ -75,95 +79,69 @@ export default class NetworkProcessor {
 
   spawnEdge() {
     const edgeExcToInhSpawnRatio = this.params.edgeExcToInhSpawnRatio;
-    const validSources = new Set(this.nodes.keys());
-    const validTargets = new Set(this.nodes.keys());
-    for (let [id, node] of this.nodes.entries()) {
-      if (node.role === NetworkNodeRole.VISUAL) {
-        validTargets.delete(id);
-      }
-      if (node.role === NetworkNodeRole.MOVEMENT) {
-        validSources.delete(id);
-      }
-      if (this.params.controlledBy === "human") {
-        if (node.role === NetworkNodeRole.MOVEMENT) {
-          validTargets.delete(id);
-        }
-      }
-    }
 
-    if (
-      validSources.size === 0 ||
-      validTargets.size <= this.params.numMotorNodes * 2
-    ) {
-      DebugConsole.info(
-        "Need at least one valid source choice and at least 3 valid target node choice to spawn edge."
+    let sourceNode = null;
+    let targetNode = null;
+
+    const allNodes = Array.from(this.nodes.values());
+
+    const dataNodes = allNodes.filter((n) => n.role === NetworkNodeRole.NORMAL);
+
+    if (dataNodes.length === 0) {
+      DebugConsole.log(
+        "No data nodes yet. Cannot directly connect visual to motor."
       );
       return;
     }
 
-    let sourceNodeId = null;
-    let targetNodeId = null;
-
-    const allMotorNodes = Array.from(this.nodes.values()).filter(
-      (node) => node.role === NetworkNodeRole.MOVEMENT
+    const sensorNodes = allNodes.filter(
+      (n) => n.role === NetworkNodeRole.VISUAL
     );
-    const freeMotorNodes = allMotorNodes.filter(
-      (node) => node.edgeIdCacheIn.size === 0
-    );
-    const allVisualNodes = Array.from(this.nodes.values()).filter(
-      (node) => node.role === NetworkNodeRole.VISUAL
-    );
-    const freeSensorNodes = allVisualNodes.filter(
-      (node) => node.edgeIdCacheOut.size === 0
-    );
-    const allDataNodes = Array.from(this.nodes.values()).filter(
-      (node) => node.role === NetworkNodeRole.NORMAL
+    const motorNodes = allNodes.filter(
+      (n) => n.role === NetworkNodeRole.MOVEMENT
     );
 
-    while (
-      !sourceNodeId ||
-      !targetNodeId ||
-      sourceNodeId === targetNodeId ||
-      (this.nodes.get(sourceNodeId).role === NetworkNodeRole.VISUAL &&
-        this.nodes.get(targetNodeId).role === NetworkNodeRole.MOVEMENT)
-    ) {
-      targetNodeId = randomChoice(Array.from(validTargets));
-      sourceNodeId = randomChoice(Array.from(validSources));
-      if (this.nodes.get(sourceNodeId).role === NetworkNodeRole.NORMAL) {
-        if (freeMotorNodes.length > 0) {
-          targetNodeId = randomChoice(freeMotorNodes).id;
-        } else {
-          const freeDataNodes = allDataNodes.filter(
-            (node) =>
-              node.role === NetworkNodeRole.NORMAL &&
-              node.edgeIdCacheIn.size === 0 &&
-              node.id !== sourceNodeId
-          );
-          if (freeDataNodes.length > 0) {
-            targetNodeId = randomChoice(freeDataNodes).id;
-          }
-        }
-      }
-      if (this.nodes.get(targetNodeId).role === NetworkNodeRole.NORMAL) {
-        if (freeSensorNodes.length > 0) {
-          sourceNodeId = randomChoice(freeSensorNodes).id;
-        } else {
-          const freeDataNodes = allDataNodes.filter(
-            (node) =>
-              node.role === NetworkNodeRole.NORMAL &&
-              node.edgeIdCacheIn.size === 0 &&
-              node.id !== sourceNodeId
-          );
-          if (freeDataNodes.length > 0) {
-            targetNodeId = randomChoice(freeDataNodes).id;
-          }
-        }
-      }
+    const freeSensorNodes = sensorNodes.filter(
+      (n) => n.edgeIdCacheOut.size === 0
+    );
+    const freeMotorNodes = motorNodes.filter((n) => n.edgeIdCacheIn.size === 0);
+    const nonSinkingNodes = dataNodes.filter((n) => n.edgeIdCacheIn.size === 0);
+    const nonSendingNodes = dataNodes.filter(
+      (n) => n.edgeIdCacheOut.size === 0
+    );
+
+    // Over-represent nodes with little or no connectivity
+    const sourceNodeChoices = [
+      // ...freeSensorNodes,
+      // ...nonSendingNodes,
+      ...sensorNodes,
+      ...dataNodes,
+    ];
+    // Over-represent nodes with little or no connectivity
+
+    const targetNodeChoices = [
+      // ...freeMotorNodes,
+      // ...nonSinkingNodes,
+      ...dataNodes,
+      ...motorNodes,
+
+    ];
+
+    if (sourceNodeChoices.length === 0 || targetNodeChoices.length === 0) {
+      DebugConsole.error(
+        "No source or target options. This should not occur. Check the code."
+      );
+      return;
+    }
+
+    while (!sourceNode || !targetNode || sourceNode.id === targetNode.id) {
+      sourceNode = randomChoice(sourceNodeChoices);
+      targetNode = randomChoice(targetNodeChoices);
     }
 
     this.connectWithEdge(
-      sourceNodeId,
-      targetNodeId,
+      sourceNode.id,
+      targetNode.id,
       Math.random() < edgeExcToInhSpawnRatio ? 1 : -1
     );
   }
@@ -205,30 +183,26 @@ export default class NetworkProcessor {
     const rSpawnNode =
       deltaTime *
       this.params.nodeSpawnRate *
-      (1 -
-        Math.exp(
-          -(
-            ((numDataNodes - this.params.targetDataNodeCount) /
-              this.params.targetDataNodeCount) **
-            2
-          )
-        ));
+      evalBellCurveShelf(
+        this.params.targetDataNodeCount,
+        this.params.targetDataNodeCountSigma,
+        numDataNodes
+      );
 
     if (Math.random() < rSpawnNode) {
       this.spawnNode();
     }
 
+    const numEdges = this.edges.size;
+
     const rSpawnEdge =
       deltaTime *
       this.params.edgeSpawnRate *
-      (1 -
-        Math.exp(
-          -(
-            ((this.edges.size - this.params.targetEdgeCount) /
-              this.params.targetEdgeCount) **
-            2
-          )
-        ));
+      evalBellCurveShelf(
+        this.params.targetEdgeCount,
+        this.params.targetEdgeCountSigma,
+        numEdges
+      );
 
     if (Math.random() < rSpawnEdge) {
       this.spawnEdge();

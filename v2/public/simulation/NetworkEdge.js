@@ -119,6 +119,23 @@ export default class NetworkEdge {
       (networkEdgeVisSettings.maxThickness -
         networkEdgeVisSettings.minThickness) *
         this.edgeVisStrengthScale.getLevelOrDefault(this.strength, 0);
+    const sn = this.getSourceNode();
+    const dn = this.getTargetNode();
+    const getDegree = (n) => {
+      return n.edgeIdCacheIn.size + n.edgeIdCacheOut.size;
+    };
+
+    let opacity = 0;
+    if (
+      sn &&
+      dn &&
+      typeof window.maxDegree === "number" &&
+      !isNaN(window.maxDegree) &&
+      window.maxDegree > this.edgeVisStrengthScale.cutoff
+    ) {
+      const meanDeg = (getDegree(sn) + getDegree(dn)) / 2;
+      opacity = meanDeg / window.maxDegree;
+    }
 
     const ctx = getVisCtx();
     ctx.lineWidth = thickness;
@@ -126,8 +143,8 @@ export default class NetworkEdge {
       this.strength === 0
         ? "black"
         : this.strength < 0
-        ? networkEdgeVisSettings.inhibitoryColor
-        : networkEdgeVisSettings.excitatoryColor;
+        ? `rgba(255,0,255,${opacity})`
+        : `rgba(255,255,0,${opacity})`;
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
@@ -140,9 +157,9 @@ export default class NetworkEdge {
     }
     if (this.getSourceNode().isFiring && this.getTargetNode().isFiring) {
       const timeDelta =
-       this.getTargetNode().lastFire - this.getSourceNode().lastFire;
-      const proximityFactor = Math.exp(-
-        Math.pow(
+        this.getTargetNode().lastFire - this.getSourceNode().lastFire;
+      const proximityFactor = Math.exp(
+        -Math.pow(
           -timeDelta / this.simParams.hebbianReinforcementTimeConstant,
           2
         )
