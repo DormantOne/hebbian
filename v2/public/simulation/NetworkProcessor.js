@@ -1,11 +1,12 @@
 import { randomUniformInclusive } from "../math/random.js";
 import DebugConsole from "../ui/DebugConsole.js";
-import { MapUtil } from "../utils/collections.js";
+import { MapUtil, randomChoice } from "../utils/collections.js";
 import NetworkNode, { NetworkNodeRole } from "./NetworkNode.js";
 import NetworkEdge from "./NetworkEdge.js";
-import { randomChoice } from "../utils/collections.js";
 import shuffled from "../third-party/npm/fisher-yates.js";
 import { evalBellCurveShelf } from "../math/stats.js";
+import { weightedRandomChoice } from "../utils/collections.js";
+import { procMax } from "../math/procedural.js";
 
 /**
  * @typedef {import('./Simulation.js').SimulationParams} SimulationParams
@@ -69,10 +70,7 @@ export default class NetworkProcessor {
       this.edges,
       this.edgeVisStrengthScale
     );
-    new MapUtil(this.edges).setOrAddWithUniqueKey(
-      newEdge.getId(),
-      newEdge
-    );
+    new MapUtil(this.edges).setOrAddWithUniqueKey(newEdge.getId(), newEdge);
     newEdge.registerWithConnectedNodes();
     DebugConsole.log(`Created edge ${newEdge.getId()}.`);
   }
@@ -101,31 +99,20 @@ export default class NetworkProcessor {
       (n) => n.role === NetworkNodeRole.MOVEMENT
     );
 
-    const freeSensorNodes = sensorNodes.filter(
-      (n) => n.edgeIdCacheOut.size === 0
-    );
-    const freeMotorNodes = motorNodes.filter((n) => n.edgeIdCacheIn.size === 0);
-    const nonSinkingNodes = dataNodes.filter((n) => n.edgeIdCacheIn.size === 0);
-    const nonSendingNodes = dataNodes.filter(
-      (n) => n.edgeIdCacheOut.size === 0
-    );
+    const sourceNodeChoices = [...sensorNodes, ...dataNodes];
 
-    // Over-represent nodes with little or no connectivity
-    const sourceNodeChoices = [
-      // ...freeSensorNodes,
-      // ...nonSendingNodes,
-      ...sensorNodes,
-      ...dataNodes,
-    ];
-    // Over-represent nodes with little or no connectivity
+    const targetNodeChoices = [...dataNodes, ...motorNodes];
 
-    const targetNodeChoices = [
-      // ...freeMotorNodes,
-      // ...nonSinkingNodes,
-      ...dataNodes,
-      ...motorNodes,
-
-    ];
+    /**
+     * @param {NetworkNode[]} nodes
+     */
+    function chooseNodeByLesserDegree(nodes) {
+      const degrees = nodes.map((n) => n.totalDegree());
+      const maxDegree = procMax(degrees);
+      if (maxDegree === 0) return randomChoice(nodes);
+      const weights = degrees.map((d) => maxDegree / (d + 1));
+      return weightedRandomChoice(nodes, weights);
+    }
 
     if (sourceNodeChoices.length === 0 || targetNodeChoices.length === 0) {
       DebugConsole.error(
@@ -134,9 +121,15 @@ export default class NetworkProcessor {
       return;
     }
 
-    while (!sourceNode || !targetNode || sourceNode.id === targetNode.id) {
-      sourceNode = randomChoice(sourceNodeChoices);
-      targetNode = randomChoice(targetNodeChoices);
+    while (
+      !sourceNode ||
+      !targetNode ||
+      sourceNode.id === targetNode.id ||
+      (sourceNode.role === NetworkNodeRole.VISUAL &&
+        targetNode.role === NetworkNodeRole.MOVEMENT)
+    ) {
+      sourceNode = chooseNodeByLesserDegree(sourceNodeChoices);
+      targetNode = chooseNodeByLesserDegree(targetNodeChoices);
     }
 
     this.connectWithEdge(
@@ -189,9 +182,17 @@ export default class NetworkProcessor {
         numDataNodes
       );
 
-    if (Math.random() < rSpawnNode) {
-      this.spawnNode();
-    }
+      {
+        const repeats = Math.ceil(rSpawnNode /1 )
+
+        for(let r = 0; r < repeats; r++  ){
+          if (Math.random() < rSpawnNode) {
+            this.spawnNode();
+          }
+        }
+    
+      }
+
 
     const numEdges = this.edges.size;
 
@@ -202,11 +203,17 @@ export default class NetworkProcessor {
         this.params.targetEdgeCount,
         this.params.targetEdgeCountSigma,
         numEdges
-      );
+      )
 
-    if (Math.random() < rSpawnEdge) {
-      this.spawnEdge();
-    }
+      {
+        const repeats = Math.ceil(rSpawnEdge /1 )
+
+        for(let r = 0; r < repeats; r++  ){
+          if (Math.random() < rSpawnEdge) {
+            this.spawnEdge();
+          }
+        }
+      }
 
     // Learning does not affect state
     // until next frame so it is okay

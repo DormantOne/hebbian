@@ -92,7 +92,7 @@ body {
 }
 
 .ParameterControl label {
-  font-size: 1.25rem;
+  font-size: 1.00rem;
   display: block;
   width: 100%;
   word-wrap: break-word;
@@ -475,6 +475,13 @@ body {
 .ParameterControl input:disabled {
   opacity: 60%;
   cursor: not-allowed;
+}
+
+.ParameterControlGroup {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 8px;
 }
 
 .PageLoadingOverlay {

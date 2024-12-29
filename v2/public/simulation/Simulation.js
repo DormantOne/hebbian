@@ -45,9 +45,11 @@ import NetworkProcessor from "./NetworkProcessor.js";
  * @property {number} spikeDecayTimeConstant - Time constant for spike decay
  * @property {number} dischargeRate - Value decay per second while firing
  * @property {number} leakRate - Value decay rate while not firing
+ * @property {number} motorLeakRate - Value decay rate while not firing
  * @property {number} spikeRefractoryPeriod - Refractory period for spikes
  * @property {number} survivalReward - Reward for survival
  * @property {number} speedReward -
+ * @property {number} successfulDodgeReward - Reward for successful dodges
  * @property {number} deathPunishment - Punishment for death
  * @property {number} threatBonusProximity - Proximity bonus for threats
  * @property {number} hebbianReinforcementTimeConstant - Time constant for Hebbian reinforcement
@@ -134,9 +136,11 @@ export default class Simulation {
         "spikeDecayTimeConstant",
         "dischargeRate",
         "leakRate",
+        "motorLeakRate",
         "spikeRefractoryPeriod",
         "survivalReward",
         "speedReward",
+        "successfulDodgeReward",
         "deathPunishment",
         "threatBonusProximity",
         "hebbianReinforcementTimeConstant",
@@ -425,11 +429,11 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
       (icicle) => !icicle.isOffScreen(this.params.playfieldHeight)
     );
 
-    // const nextIciclesLength = this.icicles.length;
-    // const icicleCountDelta = lastIciclesLength - nextIciclesLength;
-    // if (icicleCountDelta > 0) {
-    //   this.__rewardPassedSpike(icicleCountDelta);
-    // }
+    const nextIciclesLength = this.icicles.length;
+    const icicleCountDelta = lastIciclesLength - nextIciclesLength;
+    if (icicleCountDelta > 0) {
+      this.__rewardPassedSpike(icicleCountDelta);
+    }
 
     // Update player's SAT.js circle position
     this.player.circle.pos.x = this.player.x;
@@ -493,9 +497,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   }
 
   __rewardPassedSpike(count) {
-    const threatBonus = 1 + this.threatRayCount / this.params.numSensorRays;
-
-    this.fitness += this.params.survivalReward * count * threatBonus;
+    this.fitness += this.params.successfulDodgeReward * count
   }
   __punish() {
     this.fitness -= this.params.deathPunishment;

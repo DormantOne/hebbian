@@ -91,7 +91,6 @@ export default class NetworkNode {
 
     this.isFiring = false;
 
-
     this.simNodes = simNodes;
 
     this.simEdges = simEdges;
@@ -136,14 +135,14 @@ export default class NetworkNode {
     }
 
     if (this.role !== NetworkNodeRole.VISUAL) {
-      if (this.value > 0) {
-        this.value *=
-          1 -
-          deltaTime *
-            (this.isFiring
-              ? this.simParams.dischargeRate
-              : this.simParams.leakRate);
-      }
+      this.value *=
+        1 -
+        deltaTime *
+          (this.isFiring
+            ? this.simParams.dischargeRate
+            : this.role === NetworkNodeRole.NORMAL
+            ? this.simParams.leakRate
+            : this.simParams.motorLeakRate);
     }
 
     if (this.role !== NetworkNodeRole.VISUAL) {
@@ -198,10 +197,10 @@ export default class NetworkNode {
       ) {
         this.isFiring = false;
         this.lastFire = null;
-        this.refractoryTimer = 0
+        this.refractoryTimer = 0;
       }
     }
-    this.adjustVisLoc(deltaTime);
+    // this.adjustVisLoc(deltaTime);
   }
 
   constrainValue() {
@@ -248,43 +247,47 @@ export default class NetworkNode {
         interpolateRGBA(this.value, [0, 0, 0, 1], [255, 255, 255, 1])
       );
     } else {
-      const allNonVisualNodeValues = Array.from(this.simNodes.values()).filter(
-        (node) => node.role !== NetworkNodeRole.VISUAL
-      );
-      if (allNonVisualNodeValues.length < 2) {
-        fillColor = "rgba(128, 128, 128, 1)";
-      }
-
-      const zeroPoint = (0 - this.valueScale.start) / this.valueScale.range;
-
-      if (this.value == 0) {
-        fillColor = "rgba(128, 128, 128, 1)";
-      } else if (this.value > 0) {
-        const unboundT = this.valueScale.getLevel(this.value) - zeroPoint;
-        fillColor =
-          !isNaN(unboundT) && isFinite(unboundT)
-            ? formatRGBACss(
-                this.valueScale.interpolateLevelColor(
-                  clamp(unboundT * 2, 0, 1),
-                  [128, 128, 128],
-                  [255, 255, 0],
-                  [128, 128, 128]
-                )
-              )
-            : "rgba(128, 128, 128, 1)";
+      if (Math.abs(this.value) >= this.simParams.maxAbsoluteNodeValue) {
+        fillColor = this.value > 0 ? "white" : "black";
       } else {
-        const unboundT = zeroPoint - this.valueScale.getLevel(this.value);
-        fillColor =
-          !isNaN(unboundT) && isFinite(unboundT)
-            ? formatRGBACss(
-                this.valueScale.interpolateLevelColor(
-                  clamp(unboundT * 2, 0, 1),
-                  [128, 128, 128],
-                  [255, 0, 255],
-                  [128, 128, 128]
+        const allNonVisualNodeValues = Array.from(
+          this.simNodes.values()
+        ).filter((node) => node.role !== NetworkNodeRole.VISUAL);
+        if (allNonVisualNodeValues.length < 2) {
+          fillColor = "rgba(128, 128, 128, 1)";
+        }
+
+        const zeroPoint = (0 - this.valueScale.start) / this.valueScale.range;
+
+        if (this.value == 0) {
+          fillColor = "rgba(128, 128, 128, 1)";
+        } else if (this.value > 0) {
+          const unboundT = this.valueScale.getLevel(this.value) - zeroPoint;
+          fillColor =
+            !isNaN(unboundT) && isFinite(unboundT)
+              ? formatRGBACss(
+                  this.valueScale.interpolateLevelColor(
+                    clamp(unboundT * 2, 0, 1),
+                    [128, 128, 128],
+                    [255, 255, 0],
+                    [128, 128, 128]
+                  )
                 )
-              )
-            : "rgba(128, 128, 128, 1)";
+              : "rgba(128, 128, 128, 1)";
+        } else {
+          const unboundT = zeroPoint - this.valueScale.getLevel(this.value);
+          fillColor =
+            !isNaN(unboundT) && isFinite(unboundT)
+              ? formatRGBACss(
+                  this.valueScale.interpolateLevelColor(
+                    clamp(unboundT * 2, 0, 1),
+                    [128, 128, 128],
+                    [255, 0, 255],
+                    [128, 128, 128]
+                  )
+                )
+              : "rgba(128, 128, 128, 1)";
+        }
       }
     }
 
@@ -363,5 +366,15 @@ export default class NetworkNode {
         this.visLoc = [newX, newY];
       }
     }
+  }
+
+  inDegree() {
+    return this.edgeIdCacheIn.size;
+  }
+  outDegree() {
+    return this.edgeIdCacheOut.size;
+  }
+  totalDegree() {
+    return this.inDegree() + this.outDegree();
   }
 }

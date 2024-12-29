@@ -141,10 +141,13 @@ export default class NetworkEdge {
     ctx.lineWidth = thickness;
     ctx.strokeStyle =
       this.strength === 0
-        ? "black"
+        ? "rgba(128,128,128,${opacity})"
         : this.strength < 0
         ? `rgba(255,0,255,${opacity})`
         : `rgba(255,255,0,${opacity})`;
+    if (Math.abs(this.strength) >= this.simParams.maxAbsoluteEdgeStrength) {
+      ctx.strokeStyle = this.strength > 0 ? "white" : "black";
+    }
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
@@ -152,7 +155,6 @@ export default class NetworkEdge {
   }
 
   learn(deltaFitness) {
-
     if (!this.getSourceNode() || !this.getTargetNode()) {
       console.error(`Bad edge: missing source or target node: ${this.getId()}`);
       return;
@@ -169,8 +171,8 @@ export default class NetworkEdge {
       const sign = Math.sign(this.strength);
       this.strength += sign * deltaFitness * proximityFactor;
       this.constrainStrength();
-    }else{
-      this.strength *= (1-this.simParams.edgeStrengthLeakFactor)
+    } else {
+      this.strength *= 1 - this.simParams.edgeStrengthLeakFactor;
     }
   }
 }
