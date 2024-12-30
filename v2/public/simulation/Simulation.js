@@ -50,6 +50,7 @@ import NetworkProcessor from "./NetworkProcessor.js";
  * @property {number} survivalReward - Reward for survival
  * @property {number} speedReward -
  * @property {number} successfulDodgeReward - Reward for successful dodges
+ * @property {number} centeringReward -
  * @property {number} deathPunishment - Punishment for death
  * @property {number} threatBonusProximity - Proximity bonus for threats
  * @property {number} hebbianReinforcementTimeConstant - Time constant for Hebbian reinforcement
@@ -141,6 +142,7 @@ export default class Simulation {
         "survivalReward",
         "speedReward",
         "successfulDodgeReward",
+        "centeringReward",
         "deathPunishment",
         "threatBonusProximity",
         "hebbianReinforcementTimeConstant",
@@ -460,7 +462,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     this.lastFitness = this.fitness;
 
-    let nextFitness = this.fitness
+    let nextFitness = this.fitness;
 
     if (this.lastSpeed !== null) {
       nextFitness +=
@@ -472,7 +474,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     }
 
     this.fitness = nextFitness;
-
 
     if (this.fitness < this.simMinFitness) {
       window.fitnessPlotBounds.perSim.low.set(this.fitness);
@@ -494,10 +495,15 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   __reward(deltaTime) {
     const threatBonus = 1 + this.threatRayCount / this.params.numSensorRays;
     this.fitness += this.params.survivalReward * threatBonus * deltaTime;
+    this.fitness +=
+      this.params.centeringReward *
+      (1 -
+        (2 * Math.abs(this.player.x - this.params.playfieldWidth / 2)) /
+          this.params.playfieldWidth);
   }
 
   __rewardPassedSpike(count) {
-    this.fitness += this.params.successfulDodgeReward * count
+    this.fitness += this.params.successfulDodgeReward * count;
   }
   __punish() {
     this.fitness -= this.params.deathPunishment;

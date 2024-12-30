@@ -15,23 +15,23 @@ const defaultParams = {
   numMotorNodes: 5, // unitless,
   // number of redundancy motor nodes
   // per side
-  targetDataNodeCount: 360, // Rough estimate of
+  targetDataNodeCount: 120, // Rough estimate of
   targetDataNodeCountSigma: 5, // Standard deviation of targetDataNodeCount
   // how many nodes are needed
   // to achieve perfect game
-  targetEdgeCount: 360*12, // Based on average expected node degree
+  targetEdgeCount: 120*16, // Based on average expected node degree
   // to achieve perfect game
   targetEdgeCountSigma: 5,
-  maxAbsoluteNodeValue: 100, // A hard limit to prevent NaN and Inf
-  maxAbsoluteEdgeStrength: 200, // A hard limit to prevent NaN and Inf
+  maxAbsoluteNodeValue: 1000, // A hard limit to prevent NaN and Inf
+  maxAbsoluteEdgeStrength: 100, // A hard limit to prevent NaN and Inf
 
   // Learning Parameters
-  firingThreshold:3, // Amount of input "value current" (1/s)
+  firingThreshold:2.5, // Amount of input "value current" (1/s)
   // needed to fire
   spikeActivationLevel: 1, // Amount of value current
   // that a spike carries along an edge
   // upon fire
-  visualActivationLevel: 1,
+  visualActivationLevel: 0.75,
   spikeDecayTimeConstant: 0.2, // A spike potency drops to 1/e after tau seconds
   dischargeRate: 0.35,
   leakRate: 0.01,
@@ -42,10 +42,11 @@ const defaultParams = {
   // It is wise to set this to N/M * tau,
   // Where N and M are integers
   // for now lets use 2/1 * tau
-  survivalReward: 1, // (1/s) the amount of ambient fitness
+  survivalReward: 30, // (1/s) the amount of ambient fitness
   // gained per second while surviving
   speedReward: 3,
-  successfulDodgeReward: 15,
+  successfulDodgeReward: 12,
+  centeringReward: 12,
   deathPunishment: 100, // The amount of ambient fitness
   // lost instantaneously on death
   // In the future we may add a damping parameter
@@ -53,9 +54,9 @@ const defaultParams = {
   threatBonusProximity: 0.8, // The fraction of the max sensor distance
   // at which our "threat bonus" algorithm comes into play
   hebbianReinforcementTimeConstant: 0.75, // This variable name needs to be changed next factor
-  edgeStrengthLeakFactor: 0.005,
+  edgeStrengthLeakFactor: 0.01,
   // Basically the degree to which "fire together wire together" applies drops off like a bell curve the further apart in time
-  hebbianStrengthFactor: 3, // Modules hebbian reinforcement.
+  hebbianStrengthFactor: 0.0001, // Modules hebbian reinforcement.
   // The reinforcement each frame is related to the change in fitness since last frame, deltaTime, the hebbian time constant and strength factor
   nodeInactiveLifetime: 30, // If a node does not fire for N seconds, then it and any edges connected to it (in and out) are removed
   edgeInactiveLifetime: 30, // An edge is considered activated when either of its connected nodes fires. If an edge is not active for N seconds, then it is removed
