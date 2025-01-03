@@ -50,9 +50,7 @@ import NetworkProcessor from "./NetworkProcessor.js";
  * @property {number} survivalReward - Reward for survival
  * @property {number} speedReward -
  * @property {number} successfulDodgeReward - Reward for successful dodges
- * @property {number} centeringReward -
  * @property {number} deathPunishment - Punishment for death
- * @property {number} threatBonusProximity - Proximity bonus for threats
  * @property {number} hebbianReinforcementTimeConstant - Time constant for Hebbian reinforcement
  * @property {number} edgeStrengthLeakFactor
  * @property {number} hebbianStrengthFactor - Strength factor for Hebbian learning
@@ -85,7 +83,6 @@ export default class Simulation {
     /** @type {Map<string,NetworkNode>} */
     this.brainNodes = new Map();
     this.brainEdges = new Map();
-    this.threatRayCount = 0;
     this.networkNodeValueScale = new DynamicScale();
     this.networkEdgeStrengthScale = new DynamicScale();
     this.fitnessPlotScale = new DynamicScale();
@@ -142,9 +139,7 @@ export default class Simulation {
         "survivalReward",
         "speedReward",
         "successfulDodgeReward",
-        "centeringReward",
         "deathPunishment",
-        "threatBonusProximity",
         "hebbianReinforcementTimeConstant",
         "edgeStrengthLeakFactor",
         "hebbianStrengthFactor",
@@ -320,7 +315,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.lastPerformanceTime = performance.now();
     this.totalElapsedTime = 0;
 
-    this.threatRayCount = 0;
 
     // For now, we only implement human control
     if (controlledBy === "human") {
@@ -446,7 +440,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     this.__updateSensors();
 
-    this.__updateThreatRayCount();
 
     this.__updateNodeAndEdgeCounts();
 
@@ -493,13 +486,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   }
 
   __reward(deltaTime) {
-    const threatBonus = 1 + this.threatRayCount / this.params.numSensorRays;
-    this.fitness += this.params.survivalReward * threatBonus * deltaTime;
-    this.fitness +=
-      this.params.centeringReward *
-      (1 -
-        (2 * Math.abs(this.player.x - this.params.playfieldWidth / 2)) /
-          this.params.playfieldWidth);
+    this.fitness += this.params.survivalReward * deltaTime;
   }
 
   __rewardPassedSpike(count) {
@@ -737,20 +724,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.sensorDistances = new Array(this.params.numSensorRays).fill(null);
     this.sensorDetectionKinds = new Array(this.params.numSensorRays).fill(null);
 
-    // Reset threat ray count
-    this.threatRayCount = 0;
-
-    // Update UI metrics
-    window.prettyUpdateMetric("threatRayCount", {
-      widget: "fraction-bar",
-      getColor(value) {
-        const r = 128 + Math.floor((255 - 128) * value);
-        const g = 128;
-        const b = 128;
-        return `rgb(${r}, ${g}, ${b})`;
-      },
-      value: 0,
-    });
     DebugConsole.info("Died! Respawning...");
   }
 
@@ -892,32 +865,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     window.prettyUpdateMetric("dataNodeCount", dataNodeCount);
     window.prettyUpdateMetric("edgeCount", edgeCount);
   }
-
-  __updateThreatRayCount() {
-    let total = 0;
-    for (let i = 0; i < this.params.numSensorRays; i++) {
-      const distance = this.sensorDistances[i];
-      const isThreat =
-        this.sensorDetectionKinds[i] === SensorDetectionKind.ICICLE &&
-        distance / this.params.sensorMaxDistance <
-          this.params.threatBonusProximity;
-      if (isThreat) {
-        total += 1;
-      }
-    }
-    this.threatRayCount = total;
-    window.prettyUpdateMetric("threatRayCount", {
-      widget: "fraction-bar",
-      getColor(value) {
-        const r = 128 + Math.floor((255 - 128) * value);
-        const g = 128;
-        const b = 128;
-        return `rgb(${r}, ${g}, ${b})`;
-      },
-      value: this.threatRayCount / this.params.numSensorRays,
-    });
-  }
-
   __renderSensors(ctx) {
     const playerPos = new SAT.Vector(this.player.x, this.player.y);
     const numSensorRays = this.params.numSensorRays;
@@ -954,15 +901,9 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
         y: playerPos.y - adjustedDistance * Math.sin(visRightAngle),
       };
 
-      const isThreat =
-        this.sensorDetectionKinds[i] === SensorDetectionKind.ICICLE &&
-        distance / this.params.sensorMaxDistance <
-          this.params.threatBonusProximity;
 
       // Draw the triangle
-      ctx.fillStyle = isThreat
-        ? "rgba(180, 0, 0, 0.5)"
-        : "rgba(180, 180, 180, 0.5)";
+      ctx.fillStyle = "rgba(180, 180, 180, 0.5)"
       ctx.beginPath();
       ctx.moveTo(playerPos.x * METER_TO_PIXEL, playerPos.y * METER_TO_PIXEL); // Player position
       ctx.lineTo(

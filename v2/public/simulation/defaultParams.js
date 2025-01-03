@@ -46,13 +46,10 @@ const defaultParams = {
   // gained per second while surviving
   speedReward: 3,
   successfulDodgeReward: 12,
-  centeringReward: 12,
   deathPunishment: 100, // The amount of ambient fitness
   // lost instantaneously on death
   // In the future we may add a damping parameter
   // different than the fitness decay time constant
-  threatBonusProximity: 0.8, // The fraction of the max sensor distance
-  // at which our "threat bonus" algorithm comes into play
   hebbianReinforcementTimeConstant: 0.75, // This variable name needs to be changed next factor
   edgeStrengthLeakFactor: 0.01,
   // Basically the degree to which "fire together wire together" applies drops off like a bell curve the further apart in time
