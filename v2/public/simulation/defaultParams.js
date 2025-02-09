@@ -56,8 +56,8 @@ const defaultParams = {
   // Basically the degree to which "fire together wire together" applies drops off like a bell curve the further apart in time
   hebbianStrengthFactor: 0.5, // Modules hebbian reinforcement.
   // The reinforcement each frame is related to the change in fitness since last frame, deltaTime, the hebbian time constant and strength factor
-  nodeInactiveLifetime: 30, // If a node does not fire for N seconds, then it and any edges connected to it (in and out) are removed
-  edgeInactiveLifetime: 10, // An edge is considered activated when either of its connected nodes fires. If an edge is not active for N seconds, then it is removed
+  nodeInactiveLifetime: 60, // If a node does not fire for N seconds, then it and any edges connected to it (in and out) are removed
+  edgeInactiveLifetime: 30, // An edge is considered activated when either of its connected nodes fires. If an edge is not active for N seconds, then it is removed
   nodeSpawnRate: 25, // The average number of nodes that will spawn per second in order to get close to `targetDataNodeCount`
   // To hover around `targetDataNodeCount` the rate is modulated by a bell curve with sigma=1 centered at `targetDataNodeCount`
   edgeSpawnRate: 200, // The average number of edges that will spawn per second in order to get close to `targetEdgeCount`
