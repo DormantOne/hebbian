@@ -169,7 +169,12 @@ export default class NetworkEdge {
         )
       );
       const sign = Math.sign(this.strength);
-      this.strength += sign * deltaFitness * proximityFactor;
+      this.strength +=
+        sign *
+        deltaFitness *
+        proximityFactor *
+        this.simParams.hebbianStrengthFactor;
+
       this.constrainStrength();
     } else {
       this.strength *= 1 - this.simParams.edgeStrengthLeakFactor;

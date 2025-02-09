@@ -50,6 +50,7 @@ import NetworkProcessor from "./NetworkProcessor.js";
  * @property {number} survivalReward - Reward for survival
  * @property {number} speedReward -
  * @property {number} successfulDodgeReward - Reward for successful dodges
+ * @property {number} centeringReward -
  * @property {number} deathPunishment - Punishment for death
  * @property {number} hebbianReinforcementTimeConstant - Time constant for Hebbian reinforcement
  * @property {number} edgeStrengthLeakFactor
@@ -139,6 +140,7 @@ export default class Simulation {
         "survivalReward",
         "speedReward",
         "successfulDodgeReward",
+        "centeringReward",
         "deathPunishment",
         "hebbianReinforcementTimeConstant",
         "edgeStrengthLeakFactor",
@@ -190,6 +192,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.simMaxFitness = 0;
 
     this.lastSpeed = null;
+    this.passedOne = false;
 
     window.fitnessPlotBounds.perSim.high.set(0);
     window.fitnessPlotBounds.perSim.low.set(0);
@@ -315,7 +318,6 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     this.lastPerformanceTime = performance.now();
     this.totalElapsedTime = 0;
 
-
     // For now, we only implement human control
     if (controlledBy === "human") {
       this.__addPlayerInputListeners();
@@ -428,6 +430,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
     const nextIciclesLength = this.icicles.length;
     const icicleCountDelta = lastIciclesLength - nextIciclesLength;
     if (icicleCountDelta > 0) {
+      this.passedOne = true;
       this.__rewardPassedSpike(icicleCountDelta);
     }
 
@@ -440,10 +443,11 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     this.__updateSensors();
 
-
     this.__updateNodeAndEdgeCounts();
 
-    this.__reward(deltaTime);
+    // if (this.passedOne) {
+      this.__reward(deltaTime);
+    // }
 
     this.__updateFitness(deltaTime);
   }
@@ -457,14 +461,16 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
 
     let nextFitness = this.fitness;
 
-    if (this.lastSpeed !== null) {
-      nextFitness +=
-        (this.params.speedReward * deltaTime * this.lastSpeed) /
-        this.params.playerMovementSpeed;
-      window.prettyUpdateMetric("lastSpeed", this.lastSpeed.toFixed(3));
-    } else {
-      window.prettyUpdateMetric("lastSpeed", null);
-    }
+    // if (this.passedOne) {
+      if (this.lastSpeed !== null) {
+        nextFitness +=
+          (this.params.speedReward * deltaTime * this.lastSpeed) /
+          this.params.playerMovementSpeed;
+        window.prettyUpdateMetric("lastSpeed", this.lastSpeed.toFixed(3));
+      } else {
+        window.prettyUpdateMetric("lastSpeed", null);
+      }
+    // }
 
     this.fitness = nextFitness;
 
@@ -486,7 +492,11 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   }
 
   __reward(deltaTime) {
-    this.fitness += this.params.survivalReward * deltaTime;
+    const t = this.player.x / this.params.playfieldWidth;
+    const centerProximityProportion = 1 - Math.abs(t - 0.5) / 0.5;
+    this.fitness +=
+      this.params.survivalReward * deltaTime +
+      this.params.centeringReward * centerProximityProportion ** deltaTime;
   }
 
   __rewardPassedSpike(count) {
@@ -696,7 +706,7 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
   }
 
   __resetGame() {
-    // Reset player position
+    this.passedOne = false;
     this.player.x = this.params.playfieldWidth / 2;
     this.player.y = this.params.playfieldHeight;
     this.player.circle.pos.x = this.player.x;
@@ -901,9 +911,8 @@ ${paramErrorMessages.map(formatBulletedListEntry).join("\n\n")}
         y: playerPos.y - adjustedDistance * Math.sin(visRightAngle),
       };
 
-
       // Draw the triangle
-      ctx.fillStyle = "rgba(180, 180, 180, 0.5)"
+      ctx.fillStyle = "rgba(180, 180, 180, 0.5)";
       ctx.beginPath();
       ctx.moveTo(playerPos.x * METER_TO_PIXEL, playerPos.y * METER_TO_PIXEL); // Player position
       ctx.lineTo(
